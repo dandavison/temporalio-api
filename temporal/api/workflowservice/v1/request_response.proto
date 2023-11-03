@@ -39,6 +39,7 @@ import "temporal/api/enums/v1/common.proto";
 import "temporal/api/enums/v1/query.proto";
 import "temporal/api/enums/v1/reset.proto";
 import "temporal/api/enums/v1/task_queue.proto";
+import "temporal/api/enums/v1/update.proto";
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/history/v1/message.proto";
 import "temporal/api/workflow/v1/message.proto";
@@ -1236,6 +1237,14 @@ message UpdateWorkflowExecutionResponse {
     // has completed. If this response is being returned before the update has
     // completed then this field will not be set.
     temporal.api.update.v1.Outcome outcome = 2;
+
+    // The most advanced lifecycle stage that the Update is known to have
+    // reached, where lifecycle stages are ordered
+    // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_UNSPECIFIED <
+    // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_ADMITTED <
+    // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_ACCEPTED <
+    // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_COMPLETED.
+    temporal.api.enums.v1.UpdateWorkflowExecutionLifecycleStage stage = 3;
 }
 
 message StartBatchOperationRequest {
@@ -1350,4 +1359,11 @@ message PollWorkflowExecutionUpdateResponse {
     // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_ACCEPTED) then this field will
     // not be set.
     temporal.api.update.v1.Outcome outcome = 1;
+    // The most advanced lifecycle stage that the Update is known to have
+    // reached, where lifecycle stages are ordered
+    // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_UNSPECIFIED <
+    // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_ADMITTED <
+    // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_ACCEPTED <
+    // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_COMPLETED.
+    temporal.api.enums.v1.UpdateWorkflowExecutionLifecycleStage stage = 2;
 }
