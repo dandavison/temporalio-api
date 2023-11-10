@@ -1244,6 +1244,10 @@ message UpdateWorkflowExecutionResponse {
     // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_ADMITTED <
     // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_ACCEPTED <
     // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_COMPLETED.
+    // UNSPECIFIED will be returned if and only if the server's maximum wait
+    // time was reached before the Update reached the stage specified in the
+    // request WaitPolicy, and before the context deadline expired; clients may
+    // may then retry the call as needed.
     temporal.api.enums.v1.UpdateWorkflowExecutionLifecycleStage stage = 3;
 }
 
@@ -1365,5 +1369,9 @@ message PollWorkflowExecutionUpdateResponse {
     // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_ADMITTED <
     // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_ACCEPTED <
     // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_COMPLETED.
+    // UNSPECIFIED will be returned if and only if the server's maximum wait
+    // time was reached before the Update reached the stage specified in the
+    // request WaitPolicy, and before the context deadline expired; clients may
+    // may then retry the call as needed.
     temporal.api.enums.v1.UpdateWorkflowExecutionLifecycleStage stage = 2;
 }
