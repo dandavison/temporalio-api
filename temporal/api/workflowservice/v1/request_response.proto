@@ -1352,7 +1352,8 @@ message PollWorkflowExecutionUpdateRequest {
     temporal.api.update.v1.UpdateRef update_ref = 2;
     // The identity of the worker/client who is polling this update outcome
     string identity = 3;
-    // Describes when this poll request should return a response
+    // Describes when this poll request should return a response.
+    // Omit to request a non-blocking poll.
     temporal.api.update.v1.WaitPolicy wait_policy = 4;
 }
 
