@@ -584,11 +584,12 @@ message VersioningOverride {
 // the existing running workflow. In this case, it will create a WorkflowExecutionOptionsUpdatedEvent
 // history event in the running workflow with the changes requested in this object.
 message OnConflictOptions {
-    // Attaches the request ID to the running workflow.
+    // Attach the request ID to the WorkflowExecutionOptionsUpdatedEvent history event so that the
+    // request ID can be used to link to the event.
     bool attach_request_id = 1;
-    // Attaches the completion callbacks to the running workflow.
+    // Attach the completion callbacks to the running workflow.
     bool attach_completion_callbacks = 2;
-    // Attaches the links to the WorkflowExecutionOptionsUpdatedEvent history event.
+    // Attach the links to the WorkflowExecutionOptionsUpdatedEvent history event.
     bool attach_links = 3;
 }
 
