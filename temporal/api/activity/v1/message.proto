@@ -21,7 +21,7 @@ import "temporal/api/taskqueue/v1/message.proto";
 import "temporal/api/sdk/v1/user_metadata.proto";
 
 // Identifies a specific activity within a namespace. Practically speaking, because run_id is a
-// uuid, a workflow execution is globally unique. Note that many commands allow specifying an empty
+// uuid, an activity execution is globally unique. Note that many commands allow specifying an empty
 // run id as a way of saying "target the latest run of the activity".
 // TODO: Make this a generic EntityExecution?
 message ActivityExecution {
