@@ -26,7 +26,7 @@ import "temporal/api/sdk/v1/user_metadata.proto";
 
 
 // Hold basic information about a workflow execution.
-// This structure is a part of visibility, and thus contain a limited subset of information.
+// This structure is a part of visibility, and thus contains a limited subset of information.
 message WorkflowExecutionInfo {
     temporal.api.common.v1.WorkflowExecution execution = 1;
     temporal.api.common.v1.WorkflowType type = 2;
