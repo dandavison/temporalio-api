@@ -11219,46 +11219,7 @@
         }
       }
     },
-    "v1ActivityExecutionStatus": {
-      "type": "string",
-      "enum": [
-        "ACTIVITY_EXECUTION_STATUS_UNSPECIFIED",
-        "ACTIVITY_EXECUTION_STATUS_RUNNING",
-        "ACTIVITY_EXECUTION_STATUS_COMPLETED",
-        "ACTIVITY_EXECUTION_STATUS_FAILED",
-        "ACTIVITY_EXECUTION_STATUS_CANCELED",
-        "ACTIVITY_EXECUTION_STATUS_TERMINATED",
-        "ACTIVITY_EXECUTION_STATUS_TIMED_OUT"
-      ],
-      "default": "ACTIVITY_EXECUTION_STATUS_UNSPECIFIED",
-      "description": "Status of a standalone activity.\nThe status is updated once, when the activity is originally scheduled, and again when the activity reaches a terminal\nstatus.\nTODO: Should this be a common execution status? Seems like the other archetypes will share this status.\n\n - ACTIVITY_EXECUTION_STATUS_RUNNING: The activity is not in a terminal status. This does not necessarily mean that there is a currently running\nattempt. The activity may be backing off between attempts or waiting for a worker to pick it up.\n - ACTIVITY_EXECUTION_STATUS_COMPLETED: The activity completed successfully.\n - ACTIVITY_EXECUTION_STATUS_FAILED: The activity completed with failure.\n - ACTIVITY_EXECUTION_STATUS_CANCELED: The activity completed as canceled.\nRequesting to cancel an activity does not automatically transition the activity to canceled status. If the\nactivity has a currently running attempt, the activity will only transition to canceled status if the current\nattempt is unsuccessful.\nTODO: Clarify what happens if there are no more allowed retries after the current attempt.\n - ACTIVITY_EXECUTION_STATUS_TERMINATED: The activity was terminated. Termination does not reach the worker and the activity code cannot react to it.\nA terminated activity may have a running attempt and will be requested to be canceled by the server when it\nheartbeats.\n - ACTIVITY_EXECUTION_STATUS_TIMED_OUT: The activity has timed out by reaching the specified shedule-to-start or schedule-to-close timeouts.\nTODO: Clarify if there are other conditions where the activity can end up in timed out status."
-    },
-    "v1ActivityFailureInfo": {
-      "type": "object",
-      "properties": {
-        "scheduledEventId": {
-          "type": "string",
-          "format": "int64"
-        },
-        "startedEventId": {
-          "type": "string",
-          "format": "int64"
-        },
-        "identity": {
-          "type": "string"
-        },
-        "activityType": {
-          "$ref": "#/definitions/v1ActivityType"
-        },
-        "activityId": {
-          "type": "string"
-        },
-        "retryState": {
-          "$ref": "#/definitions/v1RetryState"
-        }
-      }
-    },
-    "v1ActivityListInfo": {
+    "v1ActivityExecutionListInfo": {
       "type": "object",
       "properties": {
         "activityId": {
@@ -11315,6 +11276,45 @@
         }
       },
       "description": "Limited activity information returned in the list response."
+    },
+    "v1ActivityExecutionStatus": {
+      "type": "string",
+      "enum": [
+        "ACTIVITY_EXECUTION_STATUS_UNSPECIFIED",
+        "ACTIVITY_EXECUTION_STATUS_RUNNING",
+        "ACTIVITY_EXECUTION_STATUS_COMPLETED",
+        "ACTIVITY_EXECUTION_STATUS_FAILED",
+        "ACTIVITY_EXECUTION_STATUS_CANCELED",
+        "ACTIVITY_EXECUTION_STATUS_TERMINATED",
+        "ACTIVITY_EXECUTION_STATUS_TIMED_OUT"
+      ],
+      "default": "ACTIVITY_EXECUTION_STATUS_UNSPECIFIED",
+      "description": "Status of a standalone activity.\nThe status is updated once, when the activity is originally scheduled, and again when the activity reaches a terminal\nstatus.\nTODO: Should this be a common execution status? Seems like the other archetypes will share this status.\n\n - ACTIVITY_EXECUTION_STATUS_RUNNING: The activity is not in a terminal status. This does not necessarily mean that there is a currently running\nattempt. The activity may be backing off between attempts or waiting for a worker to pick it up.\n - ACTIVITY_EXECUTION_STATUS_COMPLETED: The activity completed successfully.\n - ACTIVITY_EXECUTION_STATUS_FAILED: The activity completed with failure.\n - ACTIVITY_EXECUTION_STATUS_CANCELED: The activity completed as canceled.\nRequesting to cancel an activity does not automatically transition the activity to canceled status. If the\nactivity has a currently running attempt, the activity will only transition to canceled status if the current\nattempt is unsuccessful.\nTODO: Clarify what happens if there are no more allowed retries after the current attempt.\n - ACTIVITY_EXECUTION_STATUS_TERMINATED: The activity was terminated. Termination does not reach the worker and the activity code cannot react to it.\nA terminated activity may have a running attempt and will be requested to be canceled by the server when it\nheartbeats.\n - ACTIVITY_EXECUTION_STATUS_TIMED_OUT: The activity has timed out by reaching the specified shedule-to-start or schedule-to-close timeouts.\nTODO: Clarify if there are other conditions where the activity can end up in timed out status."
+    },
+    "v1ActivityFailureInfo": {
+      "type": "object",
+      "properties": {
+        "scheduledEventId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "startedEventId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "identity": {
+          "type": "string"
+        },
+        "activityType": {
+          "$ref": "#/definitions/v1ActivityType"
+        },
+        "activityId": {
+          "type": "string"
+        },
+        "retryState": {
+          "$ref": "#/definitions/v1RetryState"
+        }
+      }
     },
     "v1ActivityOptions": {
       "type": "object",
@@ -13961,7 +13961,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1ActivityListInfo"
+            "$ref": "#/definitions/v1ActivityExecutionListInfo"
           }
         },
         "nextPageToken": {
