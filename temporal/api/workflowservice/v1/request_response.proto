@@ -2619,35 +2619,36 @@ message StartActivityExecutionRequest {
 
     string activity_id = 4;
     temporal.api.common.v1.ActivityType activity_type = 5;
-    // Serialized arguments to the activity. These are passed as arguments to the activity function.
-    temporal.api.common.v1.Payloads input = 6;
 
     // Task queue to schedule this activity on.
-    temporal.api.taskqueue.v1.TaskQueue task_queue = 7;
+    temporal.api.taskqueue.v1.TaskQueue task_queue = 6;
     // Indicates how long the caller is willing to wait for an activity completion. Limits how long
     // retries will be attempted. Either this or `start_to_close_timeout` must be specified.
     //
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
-    google.protobuf.Duration schedule_to_close_timeout = 8;
+    google.protobuf.Duration schedule_to_close_timeout = 7;
     // Limits time an activity task can stay in a task queue before a worker picks it up. This
     // timeout is always non retryable, as all a retry would achieve is to put it back into the same
     // queue. Defaults to `schedule_to_close_timeout` if not specified.
     //
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
-    google.protobuf.Duration schedule_to_start_timeout = 9;
+    google.protobuf.Duration schedule_to_start_timeout = 8;
     // Maximum time an activity is allowed to execute after being picked up by a worker. This
     // timeout is always retryable. Either this or `schedule_to_close_timeout` must be
     // specified.
     //
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
-    google.protobuf.Duration start_to_close_timeout = 10;
+    google.protobuf.Duration start_to_close_timeout = 9;
     // Maximum permitted time between successful worker heartbeats.
-    google.protobuf.Duration heartbeat_timeout = 11;
+    google.protobuf.Duration heartbeat_timeout = 10;
     // The retry policy for the activity. Will never exceed `schedule_to_close_timeout`.
-    temporal.api.common.v1.RetryPolicy retry_policy = 12;
+    temporal.api.common.v1.RetryPolicy retry_policy = 11;
+
+    // Serialized arguments to the activity. These are passed as arguments to the activity function.
+    temporal.api.common.v1.Payloads input = 12;
 
     // Defines whether to allow re-using the activity id from a previously *closed* activity.
     // The default policy is ACTIVITY_ID_REUSE_POLICY_ALLOW_DUPLICATE.
