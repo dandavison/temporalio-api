@@ -2872,29 +2872,25 @@ message UpdateActivityExecutionOptionsRequest {
     // Note: Experimental - the behavior of updating all activities may change or be removed in a future release.
     bool all_workflow_activities = 7;
 
+    // If set, the activity options will be restored to the options the activity was originally
+    // created with. For workflow activities the original options are restored from first
+    // ActivityTaskScheduled event. Mutually exclusive with the activity options fields below.
+    bool restore_original = 8;
+
     // Activity options. Partial updates are accepted and controlled by update_mask.
     // Mutually exclusive with restore_original.
-    temporal.api.taskqueue.v1.TaskQueue task_queue = 8;
+    temporal.api.taskqueue.v1.TaskQueue task_queue = 9;
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
-    google.protobuf.Duration schedule_to_close_timeout = 9;
+    google.protobuf.Duration schedule_to_close_timeout = 10;
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
-    google.protobuf.Duration schedule_to_start_timeout = 10;
+    google.protobuf.Duration schedule_to_start_timeout = 11;
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
-    google.protobuf.Duration start_to_close_timeout = 11;
-    google.protobuf.Duration heartbeat_timeout = 12;
-    temporal.api.common.v1.RetryPolicy retry_policy = 13;
-
-    // Controls which fields will be applied.
-    google.protobuf.FieldMask update_mask = 14;
-
-    // If set, the activity options will be restored to the defaults.
-    // Default options are then options activity was originally created with.
-    // For workflow activities the original options are restored from first ActivityTaskScheduled event.
-    // Mutually exclusive with the activity options fields above.
-    bool restore_original = 15;
+    google.protobuf.Duration start_to_close_timeout = 12;
+    google.protobuf.Duration heartbeat_timeout = 13;
+    temporal.api.common.v1.RetryPolicy retry_policy = 14;
 }
 
 message UpdateActivityExecutionOptionsResponse {
