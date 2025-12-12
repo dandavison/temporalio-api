@@ -1298,7 +1298,7 @@ service WorkflowService {
 
     // StartActivityExecution starts a new activity execution.
     //
-    // Returns an `ExecutionAlreadyStarted` error if an instance already exists with same activity ID in this namespace
+    // Returns an `ActivityExecutionAlreadyStarted` error if an instance already exists with same activity ID in this namespace
     // unless permitted by the specified ID conflict policy.
     rpc StartActivityExecution (StartActivityExecutionRequest) returns (StartActivityExecutionResponse) {
         option (google.api.http) = {
