@@ -27,7 +27,7 @@ enum ActivityExecutionStatus {
 
     // The activity failed. Causes include:
     // - Worker returned a non-retryable failure
-    // - Retry limit exhausted (max attempts or schedule-to-close timeout)
+    // - RetryPolicy maximum_attempts exhausted
     // - Attempt failed after cancellation was requested (retries are blocked once cancel is requested)
     ACTIVITY_EXECUTION_STATUS_FAILED = 3;
 
@@ -48,11 +48,12 @@ enum ActivityExecutionStatus {
     ACTIVITY_EXECUTION_STATUS_TERMINATED = 5;
 
     // The activity timed out. See TimeoutType for the specific timeout that occurred.
-    // START_TO_CLOSE and HEARTBEAT timeouts may trigger retry if the retry policy allows;
-    // this status is reached when retry is not possible (retry limit exhausted, schedule-to-close
-    // timeout exceeded, or timeout when cancellation has been requested).
+    // START_TO_CLOSE and HEARTBEAT timeouts may trigger retry if the retry policy allows; this
+    // status is reached when retry is not possible (RetryPolicy maximum_attempts exhausted,
+    // schedule-to-close would be exceeded, or cancellation was requested).
     ACTIVITY_EXECUTION_STATUS_TIMED_OUT = 6;
 }
+
 // Defines whether to allow re-using an activity ID from a previously *closed* activity.
 // If the request is denied, the server returns an `ActivityExecutionAlreadyStarted` error.
 //
