@@ -47,13 +47,10 @@ enum ActivityExecutionStatus {
     // but the activity is already terminal regardless of worker behavior.
     ACTIVITY_EXECUTION_STATUS_TERMINATED = 5;
 
-    // The activity timed out. Timeout types:
-    // - SCHEDULE_TO_START: no worker picked up the task before the deadline (terminal)
-    // - SCHEDULE_TO_CLOSE: total time from scheduling exceeded the deadline (terminal)
-    // - START_TO_CLOSE: individual attempt exceeded the deadline (may retry if allowed)
-    // - HEARTBEAT: worker stopped heartbeating (may retry if allowed)
-    // This status is reached when a timeout occurs and retry is not possible (limit exhausted,
-    // schedule-to-close exceeded, or cancellation was requested).
+    // The activity timed out. See TimeoutType for the specific timeout that occurred.
+    // START_TO_CLOSE and HEARTBEAT timeouts may trigger retry if the retry policy allows;
+    // this status is reached when retry is not possible (retry limit exhausted, schedule-to-close
+    // timeout exceeded, or timeout when cancellation has been requested).
     ACTIVITY_EXECUTION_STATUS_TIMED_OUT = 6;
 }
 // Defines whether to allow re-using an activity ID from a previously *closed* activity.
