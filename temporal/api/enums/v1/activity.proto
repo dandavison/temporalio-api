@@ -16,25 +16,46 @@ option csharp_namespace = "Temporalio.Api.Enums.V1";
 //     aip.dev/not-precedent: Named consistently with WorkflowExecutionStatus. --)
 enum ActivityExecutionStatus {
     ACTIVITY_EXECUTION_STATUS_UNSPECIFIED = 0;
-    // The activity is not in a terminal status. This does not necessarily mean that there is a currently running
-    // attempt. The activity may be backing off between attempts or waiting for a worker to pick it up.
+
+    // The activity has not reached a terminal status. See PendingActivityState for the
+    // detailed state (SCHEDULED, STARTED, or CANCEL_REQUESTED).
     ACTIVITY_EXECUTION_STATUS_RUNNING = 1;
+
     // The activity completed successfully.
     ACTIVITY_EXECUTION_STATUS_COMPLETED = 2;
-    // The activity completed with failure.
+
+    // The activity failed. Causes include:
+    // - Worker returned a non-retryable failure
+    // - Retry limit exhausted (max attempts or schedule-to-close timeout)
+    // - Attempt failed after cancellation was requested (retries are blocked once cancel is requested)
     ACTIVITY_EXECUTION_STATUS_FAILED = 3;
-    // The activity completed as canceled. Requesting to cancel an activity does not automatically
-    // transition the activity to canceled status. If the activity has a currently running attempt,
-    // the activity will transition to canceled status if the worker explicitly responds to the task
-    // with a cancellation response. Retries are not attempted once cancellation is requested. If
-    // the attempt fails, the activity transitions to FAILED status instead even if there has been a
-    // cancellation request (and regardless of remaining retries).
+
+    // The activity was canceled. This status is reached only when:
+    // - Cancellation was requested while the activity was SCHEDULED (not yet picked up by a worker),
+    //   in which case cancellation is immediate, OR
+    // - Cancellation was requested while an attempt was in progress, AND the worker explicitly
+    //   acknowledged cancellation via RespondActivityTaskCanceled.
+    //
+    // Workers learn about pending cancellation through heartbeat responses (CancelRequested=true).
+    // Activities that do not heartbeat will not receive cancellation notification during execution;
+    // they will only fail the RespondActivityTaskCompleted/Failed call if cancellation was requested.
+    //
+    // If an attempt fails or times out after cancellation is requested, the activity transitions
+    // to FAILED, not CANCELED — retries are blocked but the terminal status reflects the actual outcome.
     ACTIVITY_EXECUTION_STATUS_CANCELED = 4;
-    // The activity was terminated. Termination does not reach the worker and activity code cannot react to it.
-    // A terminated activity may have a running attempt and will be requested to be canceled by the server when it
-    // heartbeats.
+
+    // The activity was terminated. Termination is immediate and does not wait for worker acknowledgment.
+    // The worker will not receive a termination signal; if an attempt is in progress, the server
+    // will set CancelRequested=true on subsequent heartbeat responses, but the activity is already
+    // in terminal TERMINATED status regardless of worker behavior.
     ACTIVITY_EXECUTION_STATUS_TERMINATED = 5;
-    // The activity has timed out due to a schedule-to-close, schedule-to-start, or start-to-close timeout.
+
+    // The activity timed out. Timeout types:
+    // - SCHEDULE_TO_START: no worker picked up the task before the deadline (not retried)
+    // - SCHEDULE_TO_CLOSE: total time from scheduling exceeded the deadline (not retried)
+    // - START_TO_CLOSE: individual attempt exceeded the deadline (may trigger retry if allowed)
+    // - HEARTBEAT: worker stopped heartbeating (may trigger retry if allowed)
+    // This status is reached when a non-retryable timeout occurs or retries are exhausted.
     ACTIVITY_EXECUTION_STATUS_TIMED_OUT = 6;
 }
 
