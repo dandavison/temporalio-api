@@ -18,10 +18,11 @@ enum ActivityExecutionStatus {
     ACTIVITY_EXECUTION_STATUS_UNSPECIFIED = 0;
 
     // The activity has not reached a terminal status. See PendingActivityState for the
-    // detailed state (SCHEDULED, STARTED, or CANCEL_REQUESTED).
+    // running substate (SCHEDULED, STARTED, or CANCEL_REQUESTED).
     ACTIVITY_EXECUTION_STATUS_RUNNING = 1;
 
-    // The activity completed successfully.
+    // The activity completed successfully. An activity can complete even after cancellation
+    // is requested if the worker calls RespondActivityTaskCompleted before acknowledging cancellation.
     ACTIVITY_EXECUTION_STATUS_COMPLETED = 2;
 
     // The activity failed. Causes include:
@@ -30,35 +31,31 @@ enum ActivityExecutionStatus {
     // - Attempt failed after cancellation was requested (retries are blocked once cancel is requested)
     ACTIVITY_EXECUTION_STATUS_FAILED = 3;
 
-    // The activity was canceled. This status is reached only when:
-    // - Cancellation was requested while the activity was SCHEDULED (not yet picked up by a worker),
-    //   in which case cancellation is immediate, OR
-    // - Cancellation was requested while an attempt was in progress, AND the worker explicitly
-    //   acknowledged cancellation via RespondActivityTaskCanceled.
+    // The activity was canceled. This status is reached when:
+    // - Cancellation was requested while the activity was SCHEDULED (i.e. not yet picked up by a worker), OR
+    // - Cancellation was requested while STARTED and the worker called RespondActivityTaskCanceled.
     //
-    // Workers learn about pending cancellation through heartbeat responses (CancelRequested=true).
-    // Activities that do not heartbeat will not receive cancellation notification during execution;
-    // they will only fail the RespondActivityTaskCompleted/Failed call if cancellation was requested.
-    //
-    // If an attempt fails or times out after cancellation is requested, the activity transitions
-    // to FAILED, not CANCELED — retries are blocked but the terminal status reflects the actual outcome.
+    // Workers discover pending cancellation via heartbeat responses (cancel_requested=true). An
+    // activity that does not heartbeat will not learn of the cancellation request during execution.
+    // It may complete, fail, or time out normally; the terminal status reflects the actual outcome.
+    // CANCELED status requires explicit worker acknowledgment (or immediate cancellation of a
+    // SCHEDULED activity).
     ACTIVITY_EXECUTION_STATUS_CANCELED = 4;
 
-    // The activity was terminated. Termination is immediate and does not wait for worker acknowledgment.
-    // The worker will not receive a termination signal; if an attempt is in progress, the server
-    // will set CancelRequested=true on subsequent heartbeat responses, but the activity is already
-    // in terminal TERMINATED status regardless of worker behavior.
+    // The activity was terminated. Termination is immediate and does not wait for worker
+    // acknowledgment. The server sets cancel_requested=true on subsequent heartbeat responses,
+    // but the activity is already terminal regardless of worker behavior.
     ACTIVITY_EXECUTION_STATUS_TERMINATED = 5;
 
     // The activity timed out. Timeout types:
-    // - SCHEDULE_TO_START: no worker picked up the task before the deadline (not retried)
-    // - SCHEDULE_TO_CLOSE: total time from scheduling exceeded the deadline (not retried)
-    // - START_TO_CLOSE: individual attempt exceeded the deadline (may trigger retry if allowed)
-    // - HEARTBEAT: worker stopped heartbeating (may trigger retry if allowed)
-    // This status is reached when a non-retryable timeout occurs or retries are exhausted.
+    // - SCHEDULE_TO_START: no worker picked up the task before the deadline (terminal)
+    // - SCHEDULE_TO_CLOSE: total time from scheduling exceeded the deadline (terminal)
+    // - START_TO_CLOSE: individual attempt exceeded the deadline (may retry if allowed)
+    // - HEARTBEAT: worker stopped heartbeating (may retry if allowed)
+    // This status is reached when a timeout occurs and retry is not possible (limit exhausted,
+    // schedule-to-close exceeded, or cancellation was requested).
     ACTIVITY_EXECUTION_STATUS_TIMED_OUT = 6;
 }
-
 // Defines whether to allow re-using an activity ID from a previously *closed* activity.
 // If the request is denied, the server returns an `ActivityExecutionAlreadyStarted` error.
 //
