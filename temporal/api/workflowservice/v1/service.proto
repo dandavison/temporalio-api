@@ -203,26 +203,27 @@ service WorkflowService {
     rpc PollActivityTaskQueue (PollActivityTaskQueueRequest) returns (PollActivityTaskQueueResponse) {
     }
 
-    // RecordActivityTaskHeartbeat is called by workers during activity execution to report progress
-    // and maintain liveness.
+    // RecordActivityTaskHeartbeat is called by activity code during execution to report progress
+    // and maintain liveness. The SDK does not automatically heartbeat; activity code must
+    // explicitly call this (or the SDK's heartbeat wrapper).
     //
-    // Heartbeats are valid only while an activity attempt is in progress (STARTED or
-    // CANCEL_REQUESTED). The response cancel_requested field indicates whether cancellation has
-    // been requested.
+    // Heartbeats are valid only while an activity attempt is in progress (status STARTED or
+    // CANCEL_REQUESTED). Heartbeats fail with NotFound ("activity task not found") when:
+    //   - Activity is SCHEDULED (no attempt has started yet)
+    //   - Activity has reached a terminal status (COMPLETED, FAILED, CANCELED, TERMINATED, TIMED_OUT)
+    //   - Task token is stale (e.g., from a previous attempt)
+    //   - Parent workflow has completed (workflow activities only)
     //
-    // Heartbeats fail with NotFound ("activity task not found") when:
-    // - Activity is SCHEDULED (not yet picked up by a worker)
-    // - Activity has reached a terminal status (COMPLETED, FAILED, CANCELED, TERMINATED, TIMED_OUT)
-    // - Task token is stale (e.g., from a previous attempt)
-    // - Parent workflow has completed (workflow activities only)
+    // The response `cancel_requested` field indicates whether cancellation has been requested.
+    // SDKs surface this via language-idiomatic mechanisms (context cancellation in Go, exceptions
+    // in Java/Python/TypeScript, abort signals, or checkable flags). Activity code should handle
+    // cancellation gracefully and propagate the cancellation error; if the error is swallowed or
+    // a different error is thrown, the activity is recorded as FAILED rather than CANCELED.
     //
-    // If heartbeat_timeout is set and the worker allows that amount of time to elapse between
-    // heartbeats, the attempt times out. Depending on RetryPolicy, this may trigger a retry or
-    // transition the activity to TIMED_OUT status.
-    //
-    // The cancel_requested field in the response is the primary mechanism for workers to discover
-    // pending cancellation; workers should check this field after each heartbeat and initiate
-    // graceful shutdown if true.
+    // If `heartbeat_timeout` is configured and the activity allows that duration to elapse between
+    // heartbeats, the current attempt times out (TimeoutType HEARTBEAT). Depending on RetryPolicy,
+    // this may trigger a retry or transition the activity to TIMED_OUT status. See TimeoutType for
+    // all timeout scenarios.
     rpc RecordActivityTaskHeartbeat (RecordActivityTaskHeartbeatRequest) returns (RecordActivityTaskHeartbeatResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/activities/heartbeat"
@@ -234,9 +235,13 @@ service WorkflowService {
         };
     }
 
-    // See RecordActivityTaskHeartbeat. This version identifies the activity by namespace, workflow
-    // ID, and activity ID instead of task token, enabling heartbeats from external systems that
-    // do not have access to the task token.
+    // See `RecordActivityTaskHeartbeat`. This version identifies the activity by namespace, workflow
+    // ID, and activity ID instead of task token. This enables heartbeating from external systems
+    // that do not have access to the task token (e.g., async completion patterns).
+    //
+    // Note: Unlike task-token-based heartbeats, this variant cannot distinguish between attempts.
+    // If a new attempt has started, heartbeats using old attempt details may succeed but report
+    // stale progress.
     //
     // (-- api-linter: core::0136::prepositions=disabled
     //     aip.dev/not-precedent: "By" is used to indicate request type. --)
@@ -316,11 +321,23 @@ service WorkflowService {
         };
     }
 
-    // RespondActivityTaskFailed is called by workers when processing an activity task fails.
+    // RespondActivityTaskCanceled is called by activity code to acknowledge cancellation.
     //
-    // This results in a new `ACTIVITY_TASK_CANCELED` event being written to the workflow history
-    // and a new workflow task created for the workflow. Fails with `NotFound` if the task token is
-    // no longer valid due to activity timeout, already being completed, or never having existed.
+    // For cancellation to be recorded properly, the following must occur:
+    //   1. A cancellation request was made (via RequestCancelWorkflowExecution or
+    //      RequestCancelActivityExecution)
+    //   2. The activity detected cancellation (via heartbeat response or SDK mechanism)
+    //   3. The activity propagated the cancellation error (letting the SDK send this RPC)
+    //
+    // This results in a new `ACTIVITY_TASK_CANCELED` event written to the workflow history
+    // and a new workflow task created for the workflow.
+    //
+    // Fails with `NotFound` if the task token is no longer valid due to activity timeout,
+    // already being completed, or never having existed.
+    //
+    // Note: If activity code catches a cancellation error and throws a different error (or
+    // returns normally), the SDK will call RespondActivityTaskFailed or RespondActivityTaskCompleted
+    // instead, and the activity will not be recorded as canceled.
     rpc RespondActivityTaskCanceled (RespondActivityTaskCanceledRequest) returns (RespondActivityTaskCanceledResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/activities/cancel"
