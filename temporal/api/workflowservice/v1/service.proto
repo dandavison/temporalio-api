@@ -203,12 +203,26 @@ service WorkflowService {
     rpc PollActivityTaskQueue (PollActivityTaskQueueRequest) returns (PollActivityTaskQueueResponse) {
     }
 
-    // RecordActivityTaskHeartbeat is optionally called by workers while they execute activities.
+    // RecordActivityTaskHeartbeat is called by workers during activity execution to report progress
+    // and maintain liveness.
     //
-    // If worker fails to heartbeat within the `heartbeat_timeout` interval for the activity task,
-    // then it will be marked as timed out and an `ACTIVITY_TASK_TIMED_OUT` event will be written to
-    // the workflow history. Calling `RecordActivityTaskHeartbeat` will fail with `NotFound` in
-    // such situations, in that event, the SDK should request cancellation of the activity.
+    // Heartbeats are valid only while an activity attempt is in progress (STARTED or
+    // CANCEL_REQUESTED). The response cancel_requested field indicates whether cancellation has
+    // been requested.
+    //
+    // Heartbeats fail with NotFound ("activity task not found") when:
+    // - Activity is SCHEDULED (not yet picked up by a worker)
+    // - Activity has reached a terminal status (COMPLETED, FAILED, CANCELED, TERMINATED, TIMED_OUT)
+    // - Task token is stale (e.g., from a previous attempt)
+    // - Parent workflow has completed (workflow activities only)
+    //
+    // If heartbeat_timeout is set and the worker allows that amount of time to elapse between
+    // heartbeats, the attempt times out. Depending on RetryPolicy, this may trigger a retry or
+    // transition the activity to TIMED_OUT status.
+    //
+    // The cancel_requested field in the response is the primary mechanism for workers to discover
+    // pending cancellation; workers should check this field after each heartbeat and initiate
+    // graceful shutdown if true.
     rpc RecordActivityTaskHeartbeat (RecordActivityTaskHeartbeatRequest) returns (RecordActivityTaskHeartbeatResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/activities/heartbeat"
@@ -220,8 +234,9 @@ service WorkflowService {
         };
     }
 
-    // See `RecordActivityTaskHeartbeat`. This version allows clients to record heartbeats by
-    // namespace/workflow id/activity id instead of task token.
+    // See RecordActivityTaskHeartbeat. This version identifies the activity by namespace, workflow
+    // ID, and activity ID instead of task token, enabling heartbeats from external systems that
+    // do not have access to the task token.
     //
     // (-- api-linter: core::0136::prepositions=disabled
     //     aip.dev/not-precedent: "By" is used to indicate request type. --)
