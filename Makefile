@@ -2,7 +2,7 @@ SHELL=bash -o pipefail
 
 $(VERBOSE).SILENT:
 ############################# Main targets #############################
-ci-build: install proto http-api-docs
+ci-build: install proto http-api-docs http-api-lint
 
 # Install dependencies.
 install: grpc-install api-linter-install buf-install
@@ -72,6 +72,10 @@ http-api-docs:
 	DESC=$$(cat $(OAPI_OUT)/payload_description.txt) yq e -i '$(OAPIV3_PATH).description = strenv(DESC) | del($(OAPI3_PATH).type) | del($(OAPI3_PATH).properties)' $(OAPI_OUT)/openapi.yaml
 	yq e -i '(.paths[] | .[] | .operationId) |= sub("\w+_(.*)", "$$1")' $(OAPI_OUT)/openapi.yaml
 	mv -f $(OAPI_OUT)/openapi.yaml $(OAPI_OUT)/openapiv3.yaml
+
+http-api-lint:
+	printf $(COLOR) "Check for ambiguous HTTP API routes..."
+	npx --yes @redocly/cli@latest lint $(OAPI_OUT)/openapiv2.json
 
 ##### Plugins & tools #####
 grpc-install:
