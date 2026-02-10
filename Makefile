@@ -2,7 +2,7 @@ SHELL=bash -o pipefail
 
 $(VERBOSE).SILENT:
 ############################# Main targets #############################
-ci-build: install proto http-api-docs http-api-lint
+ci-build: install proto http-api-docs http-api-lint http-api-ambiguity
 
 # Install dependencies.
 install: grpc-install api-linter-install buf-install
@@ -76,6 +76,10 @@ http-api-docs:
 http-api-lint:
 	printf $(COLOR) "Check for ambiguous HTTP API routes..."
 	npx --yes @redocly/cli@latest lint $(OAPI_OUT)/openapiv2.json
+
+http-api-ambiguity:
+	printf $(COLOR) "Check for ambiguous HTTP API routes (variable vs literal)..."
+	uv run test_http_api_ambiguity.py
 
 ##### Plugins & tools #####
 grpc-install:
