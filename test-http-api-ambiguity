@@ -33,17 +33,13 @@ def test_no_ambiguous_routes() -> None:
     unknown = nx.Graph(
         (u, v)
         for u, v in g.edges()
-        if (u[0], u[1]) not in KNOWN_CONFLICTS and (v[0], v[1]) not in KNOWN_CONFLICTS
+        if u[:2] not in KNOWN_CONFLICTS and v[:2] not in KNOWN_CONFLICTS
     )
     if unknown.number_of_edges():
-        msg = (
+        pytest.fail(
             f"Found {len(list(nx.connected_components(unknown)))} conflict group(s):\n\n"
             + format_conflicts(unknown)
         )
-        if __name__ == "__main__":
-            print(msg, file=sys.stderr)
-            sys.exit(1)
-        pytest.fail(msg)
 
 
 # --- helpers ---
@@ -111,4 +107,9 @@ def validate_segments(path: str, segments: list[str]) -> None:
 
 
 if __name__ == "__main__":
-    test_no_ambiguous_routes()
+    try:
+        test_no_ambiguous_routes()
+    except pytest.fail.Exception as e:
+        print(f"FAILED: {e}", file=sys.stderr)
+        sys.exit(1)
+    print("PASSED: test_no_ambiguous_routes")
