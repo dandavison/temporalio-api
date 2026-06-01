@@ -169,7 +169,7 @@ message BatchOperationResetActivities {
 }
 
 // BatchOperationUpdateActivityOptions sends an update-activity-options requests in a batch.
-// NOTE: keep in sync with temporal.api.workflowservice.v1.UpdateActivityRequest
+// NOTE: keep in sync with temporal.api.workflowservice.v1.UpdateActivityOptionsRequest
 message BatchOperationUpdateActivityOptions {
   // The identity of the worker/client.
   string identity = 1;
