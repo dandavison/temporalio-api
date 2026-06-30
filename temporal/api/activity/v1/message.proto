@@ -114,7 +114,8 @@ message ActivityExecutionInfo {
     google.protobuf.Timestamp last_started_time = 14;
     // The attempt this activity is currently on. Incremented each time a new attempt is scheduled.
     int32 attempt = 15;
-    // How long this activity has been running for, including all attempts and backoff between attempts.
+    // Difference between close time and execution time, i.e. the time the activity spent eligible to
+    // run, excluding any initial start delay. Mirrors WorkflowExecutionInfo.execution_duration.
     google.protobuf.Duration execution_duration = 16;
     // Time the activity was originally scheduled via a StartActivityExecution request.
     google.protobuf.Timestamp schedule_time = 17;
@@ -168,6 +169,11 @@ message ActivityExecutionInfo {
 
     // Total number of heartbeats recorded across all attempts of this activity, including retries.
     int64 total_heartbeat_count = 34;
+
+    // Time at which the activity becomes eligible to run, i.e. schedule_time + start_delay. Equal to
+    // schedule_time when there is no start delay. Mirrors WorkflowExecutionInfo.execution_time; with
+    // relative time enabled in the UI it drives the start-delay countdown. Set once at creation.
+    google.protobuf.Timestamp execution_time = 35;
 }
 
 // Limited activity information returned in the list response.
@@ -198,9 +204,12 @@ message ActivityExecutionListInfo {
     int64 state_transition_count = 9;
     // Updated once on scheduled and once on terminal status.
     int64 state_size_bytes = 10;
-    // The difference between close time and scheduled time.
+    // The difference between close time and execution time.
     // This field is only populated if the activity is closed.
     google.protobuf.Duration execution_duration = 11;
+    // Time at which the activity becomes eligible to run, i.e. schedule_time + start_delay. Equal to
+    // schedule_time when there is no start delay. Mirrors WorkflowExecutionInfo.execution_time.
+    google.protobuf.Timestamp execution_time = 12;
 }
 
 // CallbackInfo contains the state of an attached activity callback.
