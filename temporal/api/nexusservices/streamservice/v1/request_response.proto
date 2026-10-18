@@ -197,4 +197,6 @@ enum StreamFailureType {
     // The seq skips one: a new epoch must start at 0, and an epoch's next seq must follow its
     // latest.
     STREAM_FAILURE_TYPE_SEQ_GAP = 10;
+    // A record, or the append as a whole, exceeds a size limit.
+    STREAM_FAILURE_TYPE_TOO_LARGE = 11;
 }
