@@ -18900,7 +18900,7 @@
         "attemptStamp": {
           "type": "integer",
           "format": "int32",
-          "description": "Identifies this attempt among all attempts of the activity. It is 0 for the first attempt and\nincreases each time the server schedules another attempt, including after a reset, which sets\n`attempt` back to 1. It never decreases, so a worker can use it to tell a superseded attempt\nfrom the current one."
+          "description": "The stamp this attempt started with. It is 0 for the first attempt and never decreases. Unlike\n`attempt`, which a reset sets back to 1, it increases when the server schedules another\nattempt after a reset, unpause or options reset. A standalone activity's retry also increases\nit; a workflow activity's retry increases it only when the server is configured to. A reset\nduring an attempt does not change that attempt's stamp: a standalone activity applies the\nreset when the attempt ends, and a workflow activity refuses the attempt's task token instead.\nSo attempts with different stamps are different attempts, but attempts with equal stamps may\nnot be the same one."
         }
       }
     },

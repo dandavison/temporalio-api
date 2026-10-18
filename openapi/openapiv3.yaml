@@ -1875,6 +1875,11 @@ paths:
          The response follows the Nexus RPC spec semantics: synchronous completion, asynchronous start,
          or operation error.
          Handler errors (e.g., NOT_FOUND, BAD_REQUEST) are returned as gRPC errors.
+
+         (-- Prototype server support: disabled unless frontend.enableDirectNexusCalls is set for the
+             namespace. The server accepts only the System Nexus Endpoint and only operations that
+             complete synchronously, and rejects links. request_id is passed to the operation handler;
+             the server does not deduplicate requests by it. --)
       operationId: StartNexusOperation
       parameters:
         - name: namespace
@@ -1928,6 +1933,9 @@ paths:
         CancelNexusOperation requests cancellation of a previously started asynchronous Nexus operation.
          Cancellation is cooperative: this forwards a cancel request to the handler, but the operation
          will only transition to canceled if the handler processes it.
+
+         (-- Prototype server support: returns Unimplemented, because the server supports only
+             synchronous direct Nexus calls. --)
       operationId: CancelNexusOperation
       parameters:
         - name: namespace
@@ -7064,6 +7072,11 @@ paths:
          The response follows the Nexus RPC spec semantics: synchronous completion, asynchronous start,
          or operation error.
          Handler errors (e.g., NOT_FOUND, BAD_REQUEST) are returned as gRPC errors.
+
+         (-- Prototype server support: disabled unless frontend.enableDirectNexusCalls is set for the
+             namespace. The server accepts only the System Nexus Endpoint and only operations that
+             complete synchronously, and rejects links. request_id is passed to the operation handler;
+             the server does not deduplicate requests by it. --)
       operationId: StartNexusOperation
       parameters:
         - name: namespace
@@ -7117,6 +7130,9 @@ paths:
         CancelNexusOperation requests cancellation of a previously started asynchronous Nexus operation.
          Cancellation is cooperative: this forwards a cancel request to the handler, but the operation
          will only transition to canceled if the handler processes it.
+
+         (-- Prototype server support: returns Unimplemented, because the server supports only
+             synchronous direct Nexus calls. --)
       operationId: CancelNexusOperation
       parameters:
         - name: namespace
@@ -15092,10 +15108,14 @@ components:
         attemptStamp:
           type: integer
           description: |-
-            Identifies this attempt among all attempts of the activity. It is 0 for the first attempt and
-             increases each time the server schedules another attempt, including after a reset, which sets
-             `attempt` back to 1. It never decreases, so a worker can use it to tell a superseded attempt
-             from the current one.
+            The stamp this attempt started with. It is 0 for the first attempt and never decreases. Unlike
+             `attempt`, which a reset sets back to 1, it increases when the server schedules another
+             attempt after a reset, unpause or options reset. A standalone activity's retry also increases
+             it; a workflow activity's retry increases it only when the server is configured to. A reset
+             during an attempt does not change that attempt's stamp: a standalone activity applies the
+             reset when the attempt ends, and a workflow activity refuses the attempt's task token instead.
+             So attempts with different stamps are different attempts, but attempts with equal stamps may
+             not be the same one.
           format: int32
     PollNexusOperationExecutionResponse:
       type: object
