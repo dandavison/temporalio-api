@@ -25,6 +25,8 @@ message StreamRef {
     string workflow_id = 1;
     // Pins the run chain. Empty means the workflow ID's current chain.
     string first_run_id = 2;
+    // The caller's namespace. The server sets it when empty.
+    string namespace = 3;
 }
 
 // A workflow task attempt appending sink-style. The server checks it against the run's current
