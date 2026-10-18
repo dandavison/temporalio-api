@@ -18572,6 +18572,11 @@
         "propagatedNexusSerializationContext": {
           "$ref": "#/definitions/v1PropagatedSerializationContext",
           "description": "Serialization context propagated from the Nexus caller that started this activity."
+        },
+        "attemptStamp": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Identifies this attempt among all attempts of the activity. It is 0 for the first attempt and\nincreases each time the server schedules another attempt, including after a reset, which sets\n`attempt` back to 1. It never decreases, so a worker can use it to tell a superseded attempt\nfrom the current one."
         }
       }
     },

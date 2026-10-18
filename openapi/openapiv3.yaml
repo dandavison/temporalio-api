@@ -14849,6 +14849,14 @@ components:
           allOf:
             - $ref: '#/components/schemas/PropagatedSerializationContext'
           description: Serialization context propagated from the Nexus caller that started this activity.
+        attemptStamp:
+          type: integer
+          description: |-
+            Identifies this attempt among all attempts of the activity. It is 0 for the first attempt and
+             increases each time the server schedules another attempt, including after a reset, which sets
+             `attempt` back to 1. It never decreases, so a worker can use it to tell a superseded attempt
+             from the current one.
+          format: int32
     PollNexusOperationExecutionResponse:
       type: object
       properties:
