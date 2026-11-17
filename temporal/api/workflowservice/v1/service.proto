@@ -2039,4 +2039,57 @@ service WorkflowService {
             value: "workflow:{workflow_execution.workflow_id}"
         };
     }
+
+    // CreateStream creates a stream.
+    //
+    // Experimental placeholder. Returns an `AlreadyExists` error if a stream with the same ID exists in this
+    // namespace.
+    rpc CreateStream (CreateStreamRequest) returns (CreateStreamResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/streams/{stream.stream_id}"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/streams/{stream.stream_id}"
+                body: "*"
+            }
+        };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "stream:{stream.stream_id}"
+        };
+    }
+
+    // DescribeStream returns information about a stream.
+    //
+    // Experimental placeholder.
+    rpc DescribeStream (DescribeStreamRequest) returns (DescribeStreamResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/streams/{stream.stream_id}"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/streams/{stream.stream_id}"
+            }
+        };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "stream:{stream.stream_id}"
+        };
+    }
+
+    // CloseStream closes a stream.
+    //
+    // Experimental placeholder.
+    rpc CloseStream (CloseStreamRequest) returns (CloseStreamResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/streams/{stream.stream_id}/close"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/streams/{stream.stream_id}/close"
+                body: "*"
+            }
+        };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "stream:{stream.stream_id}"
+        };
+    }
 }

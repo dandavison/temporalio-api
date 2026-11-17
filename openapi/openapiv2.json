@@ -2426,6 +2426,134 @@
         ]
       }
     },
+    "/api/v1/namespaces/{namespace}/streams/{stream.streamId}": {
+      "get": {
+        "summary": "DescribeStream returns information about a stream.",
+        "description": "Experimental placeholder.",
+        "operationId": "DescribeStream2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DescribeStreamResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "stream.streamId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      },
+      "post": {
+        "summary": "CreateStream creates a stream.",
+        "description": "Experimental placeholder. Returns an `AlreadyExists` error if a stream with the same ID exists in this\nnamespace.",
+        "operationId": "CreateStream2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateStreamResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "stream.streamId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceCreateStreamBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/namespaces/{namespace}/streams/{stream.streamId}/close": {
+      "post": {
+        "summary": "CloseStream closes a stream.",
+        "description": "Experimental placeholder.",
+        "operationId": "CloseStream2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CloseStreamResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "stream.streamId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceCloseStreamBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/api/v1/namespaces/{namespace}/task-queues/{taskQueue.name}": {
       "get": {
         "summary": "DescribeTaskQueue returns the following information about the target task queue, broken down by Build ID:\n  - List of pollers\n  - Workflow Reachability status\n  - Backlog info for Workflow and/or Activity tasks",
@@ -8048,6 +8176,134 @@
         ]
       }
     },
+    "/namespaces/{namespace}/streams/{stream.streamId}": {
+      "get": {
+        "summary": "DescribeStream returns information about a stream.",
+        "description": "Experimental placeholder.",
+        "operationId": "DescribeStream",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DescribeStreamResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "stream.streamId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      },
+      "post": {
+        "summary": "CreateStream creates a stream.",
+        "description": "Experimental placeholder. Returns an `AlreadyExists` error if a stream with the same ID exists in this\nnamespace.",
+        "operationId": "CreateStream",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateStreamResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "stream.streamId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceCreateStreamBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/streams/{stream.streamId}/close": {
+      "post": {
+        "summary": "CloseStream closes a stream.",
+        "description": "Experimental placeholder.",
+        "operationId": "CloseStream",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CloseStreamResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "stream.streamId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceCloseStreamBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/namespaces/{namespace}/task-queues/{taskQueue.name}": {
       "get": {
         "summary": "DescribeTaskQueue returns the following information about the target task queue, broken down by Build ID:\n  - List of pollers\n  - Workflow Reachability status\n  - Backlog info for Workflow and/or Activity tasks",
@@ -11594,6 +11850,16 @@
       },
       "description": "Activity trigger will be triggered when an activity is about to start."
     },
+    "WorkflowServiceCloseStreamBody": {
+      "type": "object",
+      "properties": {
+        "stream": {
+          "type": "object",
+          "description": "Identifies a stream.\n\nExperimental placeholder: this message will gain fields identifying the stream's owner, its run,\nand where its records are stored."
+        }
+      },
+      "description": "Experimental placeholder: fields other than the stream's identity will be added."
+    },
     "WorkflowServiceCreateScheduleBody": {
       "type": "object",
       "properties": {
@@ -11621,6 +11887,20 @@
           "$ref": "#/definitions/v1SearchAttributes"
         }
       }
+    },
+    "WorkflowServiceCreateStreamBody": {
+      "type": "object",
+      "properties": {
+        "stream": {
+          "type": "object",
+          "description": "Identifies a stream.\n\nExperimental placeholder: this message will gain fields identifying the stream's owner, its run,\nand where its records are stored."
+        },
+        "requestId": {
+          "type": "string",
+          "description": "Used to de-dupe create requests."
+        }
+      },
+      "description": "Experimental placeholder: fields other than the stream's identity will be added."
     },
     "WorkflowServiceCreateWorkerDeploymentBody": {
       "type": "object",
@@ -15073,6 +15353,10 @@
         }
       }
     },
+    "v1CloseStreamResponse": {
+      "type": "object",
+      "description": "Experimental placeholder."
+    },
     "v1ClusterReplicationConfig": {
       "type": "object",
       "properties": {
@@ -15449,6 +15733,10 @@
         }
       }
     },
+    "v1CreateStreamResponse": {
+      "type": "object",
+      "description": "Experimental placeholder."
+    },
     "v1CreateWorkerDeploymentResponse": {
       "type": "object",
       "properties": {
@@ -15821,6 +16109,10 @@
           "description": "This value can be passed back to UpdateSchedule to ensure that the\nschedule was not modified between a Describe and an Update, which could\nlead to lost updates and other confusion."
         }
       }
+    },
+    "v1DescribeStreamResponse": {
+      "type": "object",
+      "description": "Experimental placeholder: the stream's description will be added."
     },
     "v1DescribeTaskQueueMode": {
       "type": "string",
@@ -20227,6 +20519,15 @@
           "description": "The type of the driver, required."
         }
       }
+    },
+    "v1StreamRef": {
+      "type": "object",
+      "properties": {
+        "streamId": {
+          "type": "string"
+        }
+      },
+      "description": "Identifies a stream.\n\nExperimental placeholder: this message will gain fields identifying the stream's owner, its run,\nand where its records are stored."
     },
     "v1StructuredCalendarSpec": {
       "type": "object",

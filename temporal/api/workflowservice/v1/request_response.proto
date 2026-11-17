@@ -47,6 +47,7 @@ import "temporal/api/sdk/v1/user_metadata.proto";
 import "temporal/api/nexus/v1/message.proto";
 import "temporal/api/nexusoperation/v1/message.proto";
 import "temporal/api/worker/v1/message.proto";
+import "temporal/api/stream/v1/message.proto";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/field_mask.proto";
@@ -3719,4 +3720,36 @@ message PollWorkflowExecutionTimeSkippingResponse {
   string failed_reason = 2;
   // The execution's current fast-forward, if any.
   temporal.api.common.v1.TimeSkippingFastForwardInfo fast_forward_info = 3;
+}
+
+// Experimental placeholder: fields other than the stream's identity will be added.
+message CreateStreamRequest {
+    string namespace = 1;
+    temporal.api.stream.v1.StreamRef stream = 2;
+    // Used to de-dupe create requests.
+    string request_id = 3;
+}
+
+// Experimental placeholder.
+message CreateStreamResponse {
+}
+
+// Experimental placeholder.
+message DescribeStreamRequest {
+    string namespace = 1;
+    temporal.api.stream.v1.StreamRef stream = 2;
+}
+
+// Experimental placeholder: the stream's description will be added.
+message DescribeStreamResponse {
+}
+
+// Experimental placeholder: fields other than the stream's identity will be added.
+message CloseStreamRequest {
+    string namespace = 1;
+    temporal.api.stream.v1.StreamRef stream = 2;
+}
+
+// Experimental placeholder.
+message CloseStreamResponse {
 }

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package temporal.api.stream.v1;
+
+option go_package = "go.temporal.io/api/stream/v1;stream";
+option java_package = "io.temporal.api.stream.v1";
+option java_multiple_files = true;
+option java_outer_classname = "MessageProto";
+option ruby_package = "Temporalio::Api::Stream::V1";
+option csharp_namespace = "Temporalio.Api.Stream.V1";
+
+// Identifies a stream.
+//
+// Experimental placeholder: this message will gain fields identifying the stream's owner, its run,
+// and where its records are stored.
+message StreamRef {
+    string stream_id = 1;
+}

@@ -2187,6 +2187,121 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/streams/{stream.stream_id}:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        DescribeStream returns information about a stream.
+
+         Experimental placeholder.
+      operationId: DescribeStream
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream.stream_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream.streamId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeStreamResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        CreateStream creates a stream.
+
+         Experimental placeholder. Returns an `AlreadyExists` error if a stream with the same ID exists in this
+         namespace.
+      operationId: CreateStream
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream.stream_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStreamRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateStreamResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/streams/{stream.stream_id}/close:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        CloseStream closes a stream.
+
+         Experimental placeholder.
+      operationId: CloseStream
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream.stream_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloseStreamRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloseStreamResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/task-queues/{taskQueue}/update-config:
     post:
       tags:
@@ -7243,6 +7358,121 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/streams/{stream.stream_id}:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        DescribeStream returns information about a stream.
+
+         Experimental placeholder.
+      operationId: DescribeStream
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream.stream_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream.streamId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeStreamResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        CreateStream creates a stream.
+
+         Experimental placeholder. Returns an `AlreadyExists` error if a stream with the same ID exists in this
+         namespace.
+      operationId: CreateStream
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream.stream_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStreamRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateStreamResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/streams/{stream.stream_id}/close:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        CloseStream closes a stream.
+
+         Experimental placeholder.
+      operationId: CloseStream
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream.stream_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloseStreamRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloseStreamResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/task-queues/{taskQueue}/update-config:
     post:
       tags:
@@ -11158,6 +11388,18 @@ components:
             - RETRY_STATE_CANCEL_REQUESTED
           type: string
           format: enum
+    CloseStreamRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        stream:
+          $ref: '#/components/schemas/StreamRef'
+      description: 'Experimental placeholder: fields other than the stream''s identity will be added.'
+    CloseStreamResponse:
+      type: object
+      properties: {}
+      description: Experimental placeholder.
     ClusterReplicationConfig:
       type: object
       properties:
@@ -11565,6 +11807,21 @@ components:
         conflictToken:
           type: string
           format: bytes
+    CreateStreamRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        stream:
+          $ref: '#/components/schemas/StreamRef'
+        requestId:
+          type: string
+          description: Used to de-dupe create requests.
+      description: 'Experimental placeholder: fields other than the stream''s identity will be added.'
+    CreateStreamResponse:
+      type: object
+      properties: {}
+      description: Experimental placeholder.
     CreateWorkerDeploymentRequest:
       type: object
       properties:
@@ -12015,6 +12272,10 @@ components:
              schedule was not modified between a Describe and an Update, which could
              lead to lost updates and other confusion.
           format: bytes
+    DescribeStreamResponse:
+      type: object
+      properties: {}
+      description: 'Experimental placeholder: the stream''s description will be added.'
     DescribeTaskQueueResponse:
       type: object
       properties:
@@ -17925,6 +18186,16 @@ components:
         type:
           type: string
           description: The type of the driver, required.
+    StreamRef:
+      type: object
+      properties:
+        streamId:
+          type: string
+      description: |-
+        Identifies a stream.
+
+         Experimental placeholder: this message will gain fields identifying the stream's owner, its run,
+         and where its records are stored.
     StructuredCalendarSpec:
       type: object
       properties:
