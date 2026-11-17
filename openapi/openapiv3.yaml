@@ -2191,10 +2191,7 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: |-
-        DescribeStream returns information about a stream.
-
-         Experimental placeholder.
+      description: DescribeStream returns a stream's settings, close state and max offset. Experimental.
       operationId: DescribeStream
       parameters:
         - name: namespace
@@ -2209,6 +2206,81 @@ paths:
             type: string
         - name: stream.streamId
           in: query
+          description: |-
+            Unique within its owner. For a standalone stream, its business ID, unique among the
+             namespace's open standalone streams.
+          schema:
+            type: string
+        - name: stream.workflowExecution.workflowId
+          in: query
+          schema:
+            type: string
+        - name: stream.workflowExecution.runId
+          in: query
+          schema:
+            type: string
+        - name: stream.workflowActivity.workflowExecution.workflowId
+          in: query
+          schema:
+            type: string
+        - name: stream.workflowActivity.workflowExecution.runId
+          in: query
+          schema:
+            type: string
+        - name: stream.workflowActivity.activityId
+          in: query
+          description: |-
+            A stream outlives its activity, so activity IDs that own streams must be unique within the
+             run.
+          schema:
+            type: string
+        - name: stream.execution.type
+          in: query
+          schema:
+            enum:
+              - EXECUTION_TYPE_UNSPECIFIED
+              - EXECUTION_TYPE_WORKFLOW
+              - EXECUTION_TYPE_ACTIVITY
+              - EXECUTION_TYPE_NEXUS_OPERATION
+            type: string
+            format: enum
+        - name: stream.execution.businessId
+          in: query
+          schema:
+            type: string
+        - name: stream.execution.runId
+          in: query
+          schema:
+            type: string
+        - name: stream.firstExecutionRunId
+          in: query
+          description: |-
+            For workflow_execution only. If set, the request fails with NotFound unless the workflow's
+             latest run is in the chain started by this run, so that a ref to a stream of an earlier
+             chain whose workflow ID has been reused does not reach the new chain's stream. Required for
+             a Redis stream, whose key contains it.
+          schema:
+            type: string
+        - name: stream.runId
+          in: query
+          description: |-
+            For a standalone stream only. A closed standalone stream's ID can be reused, and the new
+             stream gets a new run_id. Empty targets the latest run.
+          schema:
+            type: string
+        - name: stream.redis.store
+          in: query
+          description: One of the Redis stores configured in the SDK. Empty selects the default.
+          schema:
+            type: string
+        - name: stream.redis.key
+          in: query
+          description: |-
+            The stream's key, derived by the SDK from the rest of the ref. It contains the namespace, a
+             workflow chain's first_execution_run_id and a standalone stream's run_id, so streams of two
+             namespaces, or of two incarnations of one stream ID, never share a key. A standalone
+             stream's run_id comes from CreateStreamResponse, so the SDK calls CreateStream before it
+             writes to Redis. Carried so that readers need not derive it, and so that the UI can show it.
           schema:
             type: string
       responses:
@@ -2228,10 +2300,11 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        CreateStream creates a stream.
+        CreateStream creates a stream. Experimental.
 
-         Experimental placeholder. Returns an `AlreadyExists` error if a stream with the same ID exists in this
-         namespace.
+         A standalone stream is created by any caller. An owned stream is created by its owner's
+         code. With STREAM_ID_CONFLICT_POLICY_FAIL, returns an `AlreadyExists` error if the stream
+         exists.
       operationId: CreateStream
       parameters:
         - name: namespace
@@ -2267,10 +2340,7 @@ paths:
     post:
       tags:
         - WorkflowService
-      description: |-
-        CloseStream closes a stream.
-
-         Experimental placeholder.
+      description: CloseStream closes a standalone stream. Experimental.
       operationId: CloseStream
       parameters:
         - name: namespace
@@ -2296,6 +2366,287 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CloseStreamResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/streams/{stream.stream_id}/records:
+    get:
+      tags:
+        - WorkflowService
+      description: PollStream reads records of a native stream, optionally waiting for new ones. Experimental.
+      operationId: PollStream
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream.stream_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream.streamId
+          in: query
+          description: |-
+            Unique within its owner. For a standalone stream, its business ID, unique among the
+             namespace's open standalone streams.
+          schema:
+            type: string
+        - name: stream.workflowExecution.workflowId
+          in: query
+          schema:
+            type: string
+        - name: stream.workflowExecution.runId
+          in: query
+          schema:
+            type: string
+        - name: stream.workflowActivity.workflowExecution.workflowId
+          in: query
+          schema:
+            type: string
+        - name: stream.workflowActivity.workflowExecution.runId
+          in: query
+          schema:
+            type: string
+        - name: stream.workflowActivity.activityId
+          in: query
+          description: |-
+            A stream outlives its activity, so activity IDs that own streams must be unique within the
+             run.
+          schema:
+            type: string
+        - name: stream.execution.type
+          in: query
+          schema:
+            enum:
+              - EXECUTION_TYPE_UNSPECIFIED
+              - EXECUTION_TYPE_WORKFLOW
+              - EXECUTION_TYPE_ACTIVITY
+              - EXECUTION_TYPE_NEXUS_OPERATION
+            type: string
+            format: enum
+        - name: stream.execution.businessId
+          in: query
+          schema:
+            type: string
+        - name: stream.execution.runId
+          in: query
+          schema:
+            type: string
+        - name: stream.firstExecutionRunId
+          in: query
+          description: |-
+            For workflow_execution only. If set, the request fails with NotFound unless the workflow's
+             latest run is in the chain started by this run, so that a ref to a stream of an earlier
+             chain whose workflow ID has been reused does not reach the new chain's stream. Required for
+             a Redis stream, whose key contains it.
+          schema:
+            type: string
+        - name: stream.runId
+          in: query
+          description: |-
+            For a standalone stream only. A closed standalone stream's ID can be reused, and the new
+             stream gets a new run_id. Empty targets the latest run.
+          schema:
+            type: string
+        - name: stream.redis.store
+          in: query
+          description: One of the Redis stores configured in the SDK. Empty selects the default.
+          schema:
+            type: string
+        - name: stream.redis.key
+          in: query
+          description: |-
+            The stream's key, derived by the SDK from the rest of the ref. It contains the namespace, a
+             workflow chain's first_execution_run_id and a standalone stream's run_id, so streams of two
+             namespaces, or of two incarnations of one stream ID, never share a key. A standalone
+             stream's run_id comes from CreateStreamResponse, so the SDK calls CreateStream before it
+             writes to Redis. Carried so that readers need not derive it, and so that the UI can show it.
+          schema:
+            type: string
+        - name: lastReadOffset
+          in: query
+          description: Return records after this offset. Empty means from the oldest retained record.
+          schema:
+            type: string
+            format: bytes
+        - name: newestRecords
+          in: query
+          description: |-
+            Return the newest this many records, then later ones. 0 returns only records appended
+             after this request.
+          schema:
+            type: integer
+            format: int32
+        - name: endOffset
+          in: query
+          description: |-
+            Exclusive. If set, return no record at or after this offset, and don't wait. A workflow
+             reader records the range it read, and on replay reads exactly that range again.
+          schema:
+            type: string
+            format: bytes
+        - name: maximumPageSize
+          in: query
+          description: 0 means the server default.
+          schema:
+            type: integer
+            format: int32
+        - name: maximumPageBytes
+          in: query
+          description: |-
+            The most payload bytes in one page. A larger record is still returned alone. 0 means the
+             server default.
+          schema:
+            type: string
+        - name: waitNewRecords
+          in: query
+          description: |-
+            Long poll: wait until there is a record to return, or the stream closes. The server returns
+             an empty response after about 60s.
+          schema:
+            type: boolean
+        - name: reader.workflowId
+          in: query
+          schema:
+            type: string
+        - name: reader.runId
+          in: query
+          schema:
+            type: string
+        - name: readerFloorOffset
+          in: query
+          description: |-
+            The lowest offset in the reader run's history. A run created by reset or continue-as-new
+             inherits its first run's reads, so the floor comes from history, not from the run's first
+             read.
+          schema:
+            type: string
+            format: bytes
+        - name: identity
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollStreamResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    post:
+      tags:
+        - WorkflowService
+      description: AppendStream appends records to a native stream. Experimental.
+      operationId: AppendStream
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream.stream_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppendStreamRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppendStreamResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/streams/{stream.stream_id}/report-state:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        ReportStreamState reports a Redis stream's max offset. Called by the StreamDriver.
+         Experimental.
+      operationId: ReportStreamState
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream.stream_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportStreamStateRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportStreamStateResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/streams/{stream.stream_id}/subscribe:
+    post:
+      tags:
+        - WorkflowService
+      description: SubscribeStream registers a one-shot wake-up for a durable reader. Experimental.
+      operationId: SubscribeStream
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream.stream_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscribeStreamRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscribeStreamResponse'
         default:
           description: Default error response
           content:
@@ -7362,10 +7713,7 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: |-
-        DescribeStream returns information about a stream.
-
-         Experimental placeholder.
+      description: DescribeStream returns a stream's settings, close state and max offset. Experimental.
       operationId: DescribeStream
       parameters:
         - name: namespace
@@ -7380,6 +7728,81 @@ paths:
             type: string
         - name: stream.streamId
           in: query
+          description: |-
+            Unique within its owner. For a standalone stream, its business ID, unique among the
+             namespace's open standalone streams.
+          schema:
+            type: string
+        - name: stream.workflowExecution.workflowId
+          in: query
+          schema:
+            type: string
+        - name: stream.workflowExecution.runId
+          in: query
+          schema:
+            type: string
+        - name: stream.workflowActivity.workflowExecution.workflowId
+          in: query
+          schema:
+            type: string
+        - name: stream.workflowActivity.workflowExecution.runId
+          in: query
+          schema:
+            type: string
+        - name: stream.workflowActivity.activityId
+          in: query
+          description: |-
+            A stream outlives its activity, so activity IDs that own streams must be unique within the
+             run.
+          schema:
+            type: string
+        - name: stream.execution.type
+          in: query
+          schema:
+            enum:
+              - EXECUTION_TYPE_UNSPECIFIED
+              - EXECUTION_TYPE_WORKFLOW
+              - EXECUTION_TYPE_ACTIVITY
+              - EXECUTION_TYPE_NEXUS_OPERATION
+            type: string
+            format: enum
+        - name: stream.execution.businessId
+          in: query
+          schema:
+            type: string
+        - name: stream.execution.runId
+          in: query
+          schema:
+            type: string
+        - name: stream.firstExecutionRunId
+          in: query
+          description: |-
+            For workflow_execution only. If set, the request fails with NotFound unless the workflow's
+             latest run is in the chain started by this run, so that a ref to a stream of an earlier
+             chain whose workflow ID has been reused does not reach the new chain's stream. Required for
+             a Redis stream, whose key contains it.
+          schema:
+            type: string
+        - name: stream.runId
+          in: query
+          description: |-
+            For a standalone stream only. A closed standalone stream's ID can be reused, and the new
+             stream gets a new run_id. Empty targets the latest run.
+          schema:
+            type: string
+        - name: stream.redis.store
+          in: query
+          description: One of the Redis stores configured in the SDK. Empty selects the default.
+          schema:
+            type: string
+        - name: stream.redis.key
+          in: query
+          description: |-
+            The stream's key, derived by the SDK from the rest of the ref. It contains the namespace, a
+             workflow chain's first_execution_run_id and a standalone stream's run_id, so streams of two
+             namespaces, or of two incarnations of one stream ID, never share a key. A standalone
+             stream's run_id comes from CreateStreamResponse, so the SDK calls CreateStream before it
+             writes to Redis. Carried so that readers need not derive it, and so that the UI can show it.
           schema:
             type: string
       responses:
@@ -7399,10 +7822,11 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        CreateStream creates a stream.
+        CreateStream creates a stream. Experimental.
 
-         Experimental placeholder. Returns an `AlreadyExists` error if a stream with the same ID exists in this
-         namespace.
+         A standalone stream is created by any caller. An owned stream is created by its owner's
+         code. With STREAM_ID_CONFLICT_POLICY_FAIL, returns an `AlreadyExists` error if the stream
+         exists.
       operationId: CreateStream
       parameters:
         - name: namespace
@@ -7438,10 +7862,7 @@ paths:
     post:
       tags:
         - WorkflowService
-      description: |-
-        CloseStream closes a stream.
-
-         Experimental placeholder.
+      description: CloseStream closes a standalone stream. Experimental.
       operationId: CloseStream
       parameters:
         - name: namespace
@@ -7467,6 +7888,287 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CloseStreamResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/streams/{stream.stream_id}/records:
+    get:
+      tags:
+        - WorkflowService
+      description: PollStream reads records of a native stream, optionally waiting for new ones. Experimental.
+      operationId: PollStream
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream.stream_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream.streamId
+          in: query
+          description: |-
+            Unique within its owner. For a standalone stream, its business ID, unique among the
+             namespace's open standalone streams.
+          schema:
+            type: string
+        - name: stream.workflowExecution.workflowId
+          in: query
+          schema:
+            type: string
+        - name: stream.workflowExecution.runId
+          in: query
+          schema:
+            type: string
+        - name: stream.workflowActivity.workflowExecution.workflowId
+          in: query
+          schema:
+            type: string
+        - name: stream.workflowActivity.workflowExecution.runId
+          in: query
+          schema:
+            type: string
+        - name: stream.workflowActivity.activityId
+          in: query
+          description: |-
+            A stream outlives its activity, so activity IDs that own streams must be unique within the
+             run.
+          schema:
+            type: string
+        - name: stream.execution.type
+          in: query
+          schema:
+            enum:
+              - EXECUTION_TYPE_UNSPECIFIED
+              - EXECUTION_TYPE_WORKFLOW
+              - EXECUTION_TYPE_ACTIVITY
+              - EXECUTION_TYPE_NEXUS_OPERATION
+            type: string
+            format: enum
+        - name: stream.execution.businessId
+          in: query
+          schema:
+            type: string
+        - name: stream.execution.runId
+          in: query
+          schema:
+            type: string
+        - name: stream.firstExecutionRunId
+          in: query
+          description: |-
+            For workflow_execution only. If set, the request fails with NotFound unless the workflow's
+             latest run is in the chain started by this run, so that a ref to a stream of an earlier
+             chain whose workflow ID has been reused does not reach the new chain's stream. Required for
+             a Redis stream, whose key contains it.
+          schema:
+            type: string
+        - name: stream.runId
+          in: query
+          description: |-
+            For a standalone stream only. A closed standalone stream's ID can be reused, and the new
+             stream gets a new run_id. Empty targets the latest run.
+          schema:
+            type: string
+        - name: stream.redis.store
+          in: query
+          description: One of the Redis stores configured in the SDK. Empty selects the default.
+          schema:
+            type: string
+        - name: stream.redis.key
+          in: query
+          description: |-
+            The stream's key, derived by the SDK from the rest of the ref. It contains the namespace, a
+             workflow chain's first_execution_run_id and a standalone stream's run_id, so streams of two
+             namespaces, or of two incarnations of one stream ID, never share a key. A standalone
+             stream's run_id comes from CreateStreamResponse, so the SDK calls CreateStream before it
+             writes to Redis. Carried so that readers need not derive it, and so that the UI can show it.
+          schema:
+            type: string
+        - name: lastReadOffset
+          in: query
+          description: Return records after this offset. Empty means from the oldest retained record.
+          schema:
+            type: string
+            format: bytes
+        - name: newestRecords
+          in: query
+          description: |-
+            Return the newest this many records, then later ones. 0 returns only records appended
+             after this request.
+          schema:
+            type: integer
+            format: int32
+        - name: endOffset
+          in: query
+          description: |-
+            Exclusive. If set, return no record at or after this offset, and don't wait. A workflow
+             reader records the range it read, and on replay reads exactly that range again.
+          schema:
+            type: string
+            format: bytes
+        - name: maximumPageSize
+          in: query
+          description: 0 means the server default.
+          schema:
+            type: integer
+            format: int32
+        - name: maximumPageBytes
+          in: query
+          description: |-
+            The most payload bytes in one page. A larger record is still returned alone. 0 means the
+             server default.
+          schema:
+            type: string
+        - name: waitNewRecords
+          in: query
+          description: |-
+            Long poll: wait until there is a record to return, or the stream closes. The server returns
+             an empty response after about 60s.
+          schema:
+            type: boolean
+        - name: reader.workflowId
+          in: query
+          schema:
+            type: string
+        - name: reader.runId
+          in: query
+          schema:
+            type: string
+        - name: readerFloorOffset
+          in: query
+          description: |-
+            The lowest offset in the reader run's history. A run created by reset or continue-as-new
+             inherits its first run's reads, so the floor comes from history, not from the run's first
+             read.
+          schema:
+            type: string
+            format: bytes
+        - name: identity
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollStreamResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    post:
+      tags:
+        - WorkflowService
+      description: AppendStream appends records to a native stream. Experimental.
+      operationId: AppendStream
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream.stream_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppendStreamRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppendStreamResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/streams/{stream.stream_id}/report-state:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        ReportStreamState reports a Redis stream's max offset. Called by the StreamDriver.
+         Experimental.
+      operationId: ReportStreamState
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream.stream_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportStreamStateRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportStreamStateResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/streams/{stream.stream_id}/subscribe:
+    post:
+      tags:
+        - WorkflowService
+      description: SubscribeStream registers a one-shot wake-up for a durable reader. Experimental.
+      operationId: SubscribeStream
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stream.stream_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscribeStreamRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscribeStreamResponse'
         default:
           description: Default error response
           content:
@@ -9952,6 +10654,27 @@ paths:
                 $ref: '#/components/schemas/Status'
 components:
   schemas:
+    ActivityAttempt:
+      type: object
+      properties:
+        workflowActivity:
+          $ref: '#/components/schemas/WorkflowActivityRef'
+        execution:
+          allOf:
+            - $ref: '#/components/schemas/Execution'
+          description: A standalone activity. type is EXECUTION_TYPE_ACTIVITY.
+        attemptStamp:
+          type: integer
+          description: |-
+            Identifies the attempt and orders the activity's attempts, including across an activity
+             reset (PollActivityTaskQueueResponse.attempt_stamp).
+             Open: the stamp also changes during an attempt, on pause or an options update. Producers need
+             a value that changes exactly once per attempt.
+          format: int32
+        attemptNumber:
+          type: integer
+          description: 'For display only: an activity reset restarts it at 1.'
+          format: int32
     ActivityExecutionInfo:
       type: object
       properties:
@@ -10600,6 +11323,62 @@ components:
           type: string
           format: enum
       description: Alert contains notification and severity.
+    AppendStreamRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        stream:
+          $ref: '#/components/schemas/StreamRef'
+        producer:
+          allOf:
+            - $ref: '#/components/schemas/ProducerAttempt'
+          description: Built by the SDK.
+        taskToken:
+          type: string
+          description: |-
+            Activities and workflow tasks: the attempt's task token; for a local activity, the token of
+             the workflow task attempt it runs in. When the producer is in the stream's own execution,
+             the server checks that the token is current and matches producer, and rejects the append
+             with STREAM_ERROR_REASON_PRODUCER_ATTEMPT_NOT_CURRENT otherwise.
+          format: bytes
+        firstSeq:
+          type: string
+          description: Sequence number, within the producer attempt, of the first payload. Starts at 0.
+        payloads:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payload'
+          description: One data record per payload.
+        identity:
+          type: string
+      description: |-
+        Appends records to a native stream. Experimental.
+
+         The store keeps, per producer attempt, the next sequence number and the last batch's first
+         sequence number, count, content digest and offsets. A resend of the last batch returns its
+         original offsets; the same first_seq with different content fails with
+         STREAM_ERROR_REASON_SEQUENCE_CONTENT_MISMATCH; the next sequence number is written; anything
+         else fails with STREAM_ERROR_REASON_INVALID_SEQUENCE. A producer sends at most one append at a
+         time.
+
+         The first append of a producer attempt writes ProducerAttemptStarted before its records. If the
+         store has seen an earlier attempt of the same activity or workflow task that has no Ended
+         event, it first writes ProducerAttemptEnded with outcome SUPERSEDED, and rejects that attempt
+         from then on.
+
+         Workflow code appends from the worker, within the workflow task and outside the activation.
+         Appends take the owner's lock at low priority, so that signals and updates are not delayed.
+    AppendStreamResponse:
+      type: object
+      properties:
+        offsets:
+          type: array
+          items:
+            type: string
+            format: bytes
+          description: One per payload. A resent batch gets back the original offsets.
+      description: Experimental.
     ApplicationFailureInfo:
       type: object
       properties:
@@ -11388,6 +12167,17 @@ components:
             - RETRY_STATE_CANCEL_REQUESTED
           type: string
           format: enum
+    ClientAttempt:
+      type: object
+      properties:
+        producerId:
+          type: string
+          description: Chosen by the client.
+        attemptNumber:
+          type: integer
+          description: Chosen by the client. Higher is newer.
+          format: int32
+      description: A producer outside any execution. The store writes no events for client producers.
     CloseStreamRequest:
       type: object
       properties:
@@ -11395,11 +12185,58 @@ components:
           type: string
         stream:
           $ref: '#/components/schemas/StreamRef'
-      description: 'Experimental placeholder: fields other than the stream''s identity will be added.'
+        result:
+          $ref: '#/components/schemas/Payload'
+        failure:
+          $ref: '#/components/schemas/Failure'
+        identity:
+          type: string
+        requestId:
+          type: string
+          description: |-
+            A retried close succeeds. A close with a different request_id on a closed stream fails with
+             STREAM_ERROR_REASON_CLOSED.
+      description: |-
+        Closes a standalone stream, with status COMPLETED, or FAILED if failure is set. Experimental.
+
+         An owned stream is closed only by its owner: the server closes it when the owner closes, and
+         workflow code can close it earlier with the CloseStream System Nexus operation, which commits
+         with its workflow task. This method fails with STREAM_ERROR_REASON_NOT_OWNER for an owned
+         stream. Activities do not close streams: an activity can be retried, and a close can't be
+         withdrawn.
+
+         For a Redis stream, the close is state of the server's Stream component, which readers confirm
+         with DescribeStream or SubscribeStream. The SDK afterwards marks the stream closed in Redis, as
+         a hint that saves readers from waiting for a long poll to time out.
     CloseStreamResponse:
       type: object
       properties: {}
-      description: Experimental placeholder.
+      description: Experimental.
+    Closed:
+      type: object
+      properties:
+        status:
+          enum:
+            - STREAM_CLOSE_STATUS_UNSPECIFIED
+            - STREAM_CLOSE_STATUS_COMPLETED
+            - STREAM_CLOSE_STATUS_FAILED
+            - STREAM_CLOSE_STATUS_CANCELED
+            - STREAM_CLOSE_STATUS_TERMINATED
+            - STREAM_CLOSE_STATUS_TIMED_OUT
+            - STREAM_CLOSE_STATUS_IDLE
+            - STREAM_CLOSE_STATUS_MAX_LIFETIME_REACHED
+          type: string
+          format: enum
+        result:
+          $ref: '#/components/schemas/Payload'
+        failure:
+          $ref: '#/components/schemas/Failure'
+        closeTime:
+          type: string
+          format: date-time
+      description: |-
+        A stream's close. Stored in its Stream component, and returned identically to live and late
+         readers. A reset of a workflow chain to a point before the close reopens the stream.
     ClusterReplicationConfig:
       type: object
       properties:
@@ -11813,15 +12650,43 @@ components:
         namespace:
           type: string
         stream:
-          $ref: '#/components/schemas/StreamRef'
+          allOf:
+            - $ref: '#/components/schemas/StreamRef'
+          description: |-
+            For a standalone stream, run_id must be empty; the server assigns it. An owned stream can
+             only be created by its owner: a workflow through workflow code, and an activity through its
+             own code.
         requestId:
           type: string
-          description: Used to de-dupe create requests.
-      description: 'Experimental placeholder: fields other than the stream''s identity will be added.'
+          description: A retried request with the same request_id gets the same response.
+        settings:
+          $ref: '#/components/schemas/StreamSettings'
+        idConflictPolicy:
+          enum:
+            - STREAM_ID_CONFLICT_POLICY_UNSPECIFIED
+            - STREAM_ID_CONFLICT_POLICY_FAIL
+            - STREAM_ID_CONFLICT_POLICY_USE_EXISTING
+          type: string
+          description: What to do if the stream already exists. Unspecified is FAIL.
+          format: enum
+        identity:
+          type: string
+      description: Experimental.
     CreateStreamResponse:
       type: object
-      properties: {}
-      description: Experimental placeholder.
+      properties:
+        stream:
+          allOf:
+            - $ref: '#/components/schemas/StreamRef'
+          description: The stream's ref, with run_id set for a standalone stream.
+        created:
+          type: boolean
+          description: False if the stream already existed (USE_EXISTING).
+        settings:
+          allOf:
+            - $ref: '#/components/schemas/StreamSettings'
+          description: The stream's actual settings.
+      description: Experimental.
     CreateWorkerDeploymentRequest:
       type: object
       properties:
@@ -11924,6 +12789,17 @@ components:
         data:
           type: string
           format: bytes
+    DataRecord:
+      type: object
+      properties:
+        producer:
+          allOf:
+            - $ref: '#/components/schemas/ProducerAttempt'
+          description: Set by the store from the append.
+        payload:
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: Encoded by the data converter and codec; never interpreted by the server.
     DeclinedTargetVersionUpgrade:
       type: object
       properties:
@@ -12274,8 +13150,39 @@ components:
           format: bytes
     DescribeStreamResponse:
       type: object
-      properties: {}
-      description: 'Experimental placeholder: the stream''s description will be added.'
+      properties:
+        stream:
+          allOf:
+            - $ref: '#/components/schemas/StreamRef'
+          description: The stream's ref, with run_id set for a standalone stream.
+        settings:
+          $ref: '#/components/schemas/StreamSettings'
+        closed:
+          allOf:
+            - $ref: '#/components/schemas/Closed'
+          description: |-
+            Set once the stream is closed: its status, outcome and close time. This includes a Redis
+             stream that the server closed with no close in Redis, for example when its owner was
+             terminated.
+        maxOffset:
+          type: string
+          description: |-
+            The newest offset the server knows. For a Redis stream, the highest the StreamDriver has
+             reported, which may lag.
+          format: bytes
+        earliestOffset:
+          type: string
+          description: The oldest retained offset. Native streams only.
+          format: bytes
+        pendingSubscriptions:
+          type: integer
+          format: int32
+        createTime:
+          type: string
+          format: date-time
+        creatorIdentity:
+          type: string
+      description: Experimental.
     DescribeTaskQueueResponse:
       type: object
       properties:
@@ -15110,6 +16017,14 @@ components:
           allOf:
             - $ref: '#/components/schemas/PropagatedSerializationContext'
           description: Serialization context propagated from the Nexus caller that started this activity.
+        attemptStamp:
+          type: integer
+          description: |-
+            Identifies this attempt among the activity's attempts, including across an activity reset,
+             which restarts `attempt` at 1. Also in the task token, which SDKs don't decode; exposed so that
+             stream producers can identify their attempt to stores that can't decode task tokens.
+             Experimental.
+          format: int32
     PollNexusOperationExecutionResponse:
       type: object
       properties:
@@ -15141,6 +16056,32 @@ components:
           allOf:
             - $ref: '#/components/schemas/Failure'
           description: The failure if the operation completed unsuccessfully.
+    PollStreamResponse:
+      type: object
+      properties:
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/StreamRecord'
+          description: The reader's next last_read_offset is the offset of the last record it handles.
+        closed:
+          allOf:
+            - $ref: '#/components/schemas/Closed'
+          description: |-
+            Set once the stream is closed. The reader is done when this is set and it has read up to
+             max_offset.
+        maxOffset:
+          type: string
+          description: |-
+            The stream's max offset when the response was produced. A reader that polled with
+             newest_records and got no records continues from here.
+          format: bytes
+        continueAsNewSuggested:
+          type: boolean
+          description: |-
+            The records kept for this reader run's replay are near the server's limit. The reader
+             should continue as new, which moves its floor.
+      description: Experimental.
     PollWorkflowExecutionTimeSkippingResponse:
       type: object
       properties:
@@ -15493,6 +16434,83 @@ components:
 
          Not all queues in the system may support the "full" semantics of all priority
          fields. (Currently only support in matching task queues is planned.)
+    ProducerAttempt:
+      type: object
+      properties:
+        activity:
+          $ref: '#/components/schemas/ActivityAttempt'
+        workflowTask:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowTaskAttempt'
+          description: |-
+            Workflow code, and local activities, which append as the workflow task attempt they run
+             in.
+        client:
+          $ref: '#/components/schemas/ClientAttempt'
+      description: |-
+        The producer attempt that wrote a record: the attempt itself is the producer. The activity,
+         workflow task or client ID groups a unit's attempts.
+    ProducerAttemptEnded:
+      type: object
+      properties:
+        outcome:
+          enum:
+            - PRODUCER_ATTEMPT_OUTCOME_UNSPECIFIED
+            - PRODUCER_ATTEMPT_OUTCOME_COMPLETED
+            - PRODUCER_ATTEMPT_OUTCOME_FAILED
+            - PRODUCER_ATTEMPT_OUTCOME_TIMED_OUT
+            - PRODUCER_ATTEMPT_OUTCOME_CANCELED
+            - PRODUCER_ATTEMPT_OUTCOME_TERMINATED
+            - PRODUCER_ATTEMPT_OUTCOME_HANDED_OFF
+            - PRODUCER_ATTEMPT_OUTCOME_RESET
+            - PRODUCER_ATTEMPT_OUTCOME_RUN_CLOSED
+            - PRODUCER_ATTEMPT_OUTCOME_SUPERSEDED
+          type: string
+          format: enum
+        retryState:
+          enum:
+            - RETRY_STATE_UNSPECIFIED
+            - RETRY_STATE_IN_PROGRESS
+            - RETRY_STATE_NON_RETRYABLE_FAILURE
+            - RETRY_STATE_TIMEOUT
+            - RETRY_STATE_MAXIMUM_ATTEMPTS_REACHED
+            - RETRY_STATE_RETRY_POLICY_NOT_SET
+            - RETRY_STATE_INTERNAL_SERVER_ERROR
+            - RETRY_STATE_CANCEL_REQUESTED
+          type: string
+          description: |-
+            IN_PROGRESS means a retry follows. Unspecified when the writer doesn't know: for
+             SUPERSEDED, and when the SDK reports the end.
+          format: enum
+        failure:
+          $ref: '#/components/schemas/Failure'
+      description: |-
+        Written by the server in the transaction that ends the attempt, when the stream is in the
+         producer's own execution and the records are stored natively, or reach Redis through the
+         server. Otherwise written only as SUPERSEDED, when a later attempt of the same activity or
+         workflow task first appends; nothing is written for a final failure, or for a retry that never
+         appends.
+    ProducerAttemptStarted:
+      type: object
+      properties: {}
+    ProducerEvent:
+      type: object
+      properties:
+        producer:
+          $ref: '#/components/schemas/ProducerAttempt'
+        eventTime:
+          type: string
+          format: date-time
+        started:
+          allOf:
+            - $ref: '#/components/schemas/ProducerAttemptStarted'
+          description: Written by the attempt's first append to the stream, before its records.
+        ended:
+          $ref: '#/components/schemas/ProducerAttemptEnded'
+      description: |-
+        Written by the store. A producer attempt's first record in the stream comes immediately after
+         its Started event. If an Ended event is written, no record from the attempt comes after it: the
+         store rejects the attempt's appends from then on, in the same atomic step.
     PropagatedSerializationContext:
       type: object
       properties:
@@ -15688,6 +16706,20 @@ components:
     RecordWorkerHeartbeatResponse:
       type: object
       properties: {}
+    RedisStreamLocation:
+      type: object
+      properties:
+        store:
+          type: string
+          description: One of the Redis stores configured in the SDK. Empty selects the default.
+        key:
+          type: string
+          description: |-
+            The stream's key, derived by the SDK from the rest of the ref. It contains the namespace, a
+             workflow chain's first_execution_run_id and a standalone stream's run_id, so streams of two
+             namespaces, or of two incarnations of one stream ID, never share a key. A standalone
+             stream's run_id comes from CreateStreamResponse, so the SDK calls CreateStream before it
+             writes to Redis. Carried so that readers need not derive it, and so that the UI can show it.
     RegisterNamespaceRequest:
       type: object
       properties:
@@ -15749,6 +16781,29 @@ components:
         notes:
           type: string
       description: ReleaseInfo contains information about specific version of temporal.
+    ReportStreamStateRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        stream:
+          $ref: '#/components/schemas/StreamRef'
+        maxOffset:
+          type: string
+          format: bytes
+        identity:
+          type: string
+      description: |-
+        Redis streams only; called by the StreamDriver, which reads the outbox that producers' appends
+         write in Redis. Experimental.
+
+         The server keeps the highest max_offset reported, records it even when nobody is subscribed,
+         fires subscriptions whose last_read_offset is below it, and may hold the call while it debounces
+         reports. The StreamDriver acknowledges an outbox entry only after this call succeeds.
+    ReportStreamStateResponse:
+      type: object
+      properties: {}
+      description: Experimental.
     Request:
       type: object
       properties:
@@ -18186,16 +19241,128 @@ components:
         type:
           type: string
           description: The type of the driver, required.
+    StreamMoved:
+      type: object
+      properties:
+        maxOffset:
+          type: string
+          description: The stream's max offset when the wake-up was delivered.
+          format: bytes
+        closed:
+          allOf:
+            - $ref: '#/components/schemas/Closed'
+          description: |-
+            Set if the stream is closed. The reader treats the stream as closed even if it finds no
+             close in Redis: the server closes a Redis stream itself, for example when its owner is
+             terminated.
+      description: Delivered to a subscription's callback, and returned by a subscribe that fires at once.
+    StreamRecord:
+      type: object
+      properties:
+        offset:
+          type: string
+          description: |-
+            Assigned by the store. Opaque to applications, but two offsets of one stream compare
+             bytewise, as unsigned bytes, in stream order, so readers, stores and the server can order
+             them without decoding them.
+
+             A native offset is a fixed-width, big-endian namespace failover version followed by a
+             fixed-width, big-endian sequence number. Offsets written on different branches after a
+             namespace failover have no meaningful order, and the server rejects an offset that is not on
+             the current branch (STREAM_ERROR_REASON_OFFSET_NOT_ON_BRANCH). A Redis offset is the entry
+             ID's milliseconds and sequence number as two big-endian uint64s.
+          format: bytes
+        data:
+          $ref: '#/components/schemas/DataRecord'
+        producerEvent:
+          $ref: '#/components/schemas/ProducerEvent'
+      description: |-
+        One item that a read returns. Readers skip record kinds they don't recognize. A close is not a
+         record: it is stream state, returned with reads (PollStreamResponse.closed).
     StreamRef:
       type: object
       properties:
         streamId:
           type: string
+          description: |-
+            Unique within its owner. For a standalone stream, its business ID, unique among the
+             namespace's open standalone streams.
+        workflowExecution:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecution'
+          description: |-
+            A workflow chain. run_id must be empty: the ref resolves to the chain's latest run. On
+             continue-as-new the stream moves to the new run, so readers and offsets are unaffected.
+        workflowActivity:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowActivityRef'
+          description: An activity scheduled by a workflow run.
+        execution:
+          allOf:
+            - $ref: '#/components/schemas/Execution'
+          description: A standalone execution. type must be EXECUTION_TYPE_ACTIVITY.
+        firstExecutionRunId:
+          type: string
+          description: |-
+            For workflow_execution only. If set, the request fails with NotFound unless the workflow's
+             latest run is in the chain started by this run, so that a ref to a stream of an earlier
+             chain whose workflow ID has been reused does not reach the new chain's stream. Required for
+             a Redis stream, whose key contains it.
+        runId:
+          type: string
+          description: |-
+            For a standalone stream only. A closed standalone stream's ID can be reused, and the new
+             stream gets a new run_id. Empty targets the latest run.
+        redis:
+          allOf:
+            - $ref: '#/components/schemas/RedisStreamLocation'
+          description: |-
+            Set when the stream's records are stored in Redis. The server then rejects AppendStream and
+             PollStream for the stream.
       description: |-
-        Identifies a stream.
+        Identifies a stream. Experimental.
 
-         Experimental placeholder: this message will gain fields identifying the stream's owner, its run,
-         and where its records are stored.
+         A stream either has an owner execution or is standalone. An owned stream is created by its
+         owner, is closed by the server when its owner closes, and is deleted with its owner. A
+         standalone stream is an execution of its own.
+
+         Resolved in the namespace of the request that carries it. Passed as workflow, activity and
+         operation input, and written into records.
+    StreamSettings:
+      type: object
+      properties:
+        maxRecords:
+          type: string
+          description: |-
+            Keep only the newest records, by count or by total payload size. 0 means no cap. Never drops
+             records that an open workflow reader may re-read on replay.
+        maxBytes:
+          type: string
+        idleCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Close with status IDLE after this long with no appends. Unset: no idle close for an owned
+             stream (its owner's end closes it), and a server default for a standalone stream. Zero:
+             never.
+        maxLifetime:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Close with status MAX_LIFETIME_REACHED this long after the stream is created. Unset: none for
+             an owned stream, and a server default for a standalone stream. Zero: never.
+        subscriptionsEnabled:
+          type: boolean
+          description: |-
+            Redis streams only: allow readers to subscribe. Producers then also write outbox entries,
+             and a StreamDriver must run. Native streams always allow subscriptions, which cost nothing
+             until a reader subscribes.
+      description: |-
+        Settings fixed when a stream is created.
+
+         Retention is not a stream setting. A closed standalone stream is deleted after the namespace's
+         retention, and an owned stream is deleted with its owner. For a Redis stream, the store's
+         configuration also sets how long Redis keeps the records, which must be at least as long.
     StructuredCalendarSpec:
       type: object
       properties:
@@ -18250,6 +19417,57 @@ components:
          must be present to match anything.
          Relative expressions such as "last day of the month" or "third Monday" are not currently
          representable; callers must enumerate the concrete days they require.
+    SubscribeStreamRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        stream:
+          $ref: '#/components/schemas/StreamRef'
+        lastReadOffset:
+          type: string
+          description: |-
+            The offset of the last record the reader has read; empty if it has read none. A native
+             stream rejects an offset beyond its max offset.
+          format: bytes
+        callback:
+          allOf:
+            - $ref: '#/components/schemas/Callback'
+          description: |-
+            Where the wake-up is delivered, as in StartWorkflowExecutionRequest.completion_callbacks. A
+             worker reader uses the Nexus handler variant.
+        maximumWait:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            When the subscription fires if nothing else fires it first. Capped by the server; unset
+             means the server default. A lost report then delays a reader instead of stranding it.
+        identity:
+          type: string
+        requestId:
+          type: string
+          description: A retried subscribe with the same request_id creates no second subscription.
+      description: |-
+        Subscribes a durable reader: a workflow, a standalone Nexus operation, or a worker reached by a
+         Nexus handler callback. Experimental.
+
+         The subscription fires once: when the stream has a record after last_read_offset, when the
+         stream closes, or when maximum_wait passes. A reader treats every wake-up as a hint and reads
+         again.
+
+         Workflow code subscribes with the SubscribeStream System Nexus operation
+         (__temporal_system / temporal.api.stream.v1.StreamService / SubscribeStream), whose input is
+         this request with callback, identity and request_id unset; the operation's completion callback
+         and Nexus request ID are used instead, and its output is StreamMoved. The service is not
+         WorkflowService because the workflow library already registers that Nexus service name.
+    SubscribeStreamResponse:
+      type: object
+      properties:
+        fired:
+          allOf:
+            - $ref: '#/components/schemas/StreamMoved'
+          description: Set if the subscription fired at once; otherwise it was stored.
+      description: Experimental.
     TaskIdBlock:
       type: object
       properties:
@@ -20278,6 +21496,18 @@ components:
       description: |-
         Deprecated. This message is replaced with `Deployment` and `VersioningBehavior`.
          Identifies the version(s) of a worker that processed a task
+    WorkflowActivityRef:
+      type: object
+      properties:
+        workflowExecution:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecution'
+          description: Workflow ID and run ID of the run that scheduled the activity.
+        activityId:
+          type: string
+          description: |-
+            A stream outlives its activity, so activity IDs that own streams must be unique within the
+             run.
     WorkflowEvent_EventReference:
       type: object
       properties:
@@ -21547,6 +22777,25 @@ components:
               * BETWEEN ... AND
                 STARTS_WITH
       description: Activity trigger will be triggered when an activity is about to start.
+    WorkflowTaskAttempt:
+      type: object
+      properties:
+        workflowExecution:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecution'
+          description: Workflow ID and run ID.
+        startedEventId:
+          type: string
+          description: The started event ID of this workflow task attempt.
+        attemptNumber:
+          type: integer
+          format: int32
+      description: |-
+        Ordered by (started_event_id, attempt_number). The attempt number alone restarts at 1 when the
+         server reschedules a failed workflow task after new events arrive.
+
+         Open: a local activity can keep running after its workflow task completes by heartbeat, and
+         then appends as a workflow task attempt that is no longer current.
     WorkflowTaskCompletedEventAttributes:
       type: object
       properties:

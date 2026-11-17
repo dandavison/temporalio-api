@@ -2040,10 +2040,11 @@ service WorkflowService {
         };
     }
 
-    // CreateStream creates a stream.
+    // CreateStream creates a stream. Experimental.
     //
-    // Experimental placeholder. Returns an `AlreadyExists` error if a stream with the same ID exists in this
-    // namespace.
+    // A standalone stream is created by any caller. An owned stream is created by its owner's
+    // code. With STREAM_ID_CONFLICT_POLICY_FAIL, returns an `AlreadyExists` error if the stream
+    // exists.
     rpc CreateStream (CreateStreamRequest) returns (CreateStreamResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/streams/{stream.stream_id}"
@@ -2053,15 +2054,14 @@ service WorkflowService {
                 body: "*"
             }
         };
+        // TODO: for an owned stream, the resource ID should identify the owner execution.
         option (temporal.api.protometa.v1.request_header) = {
             header: "temporal-resource-id"
             value: "stream:{stream.stream_id}"
         };
     }
 
-    // DescribeStream returns information about a stream.
-    //
-    // Experimental placeholder.
+    // DescribeStream returns a stream's settings, close state and max offset. Experimental.
     rpc DescribeStream (DescribeStreamRequest) returns (DescribeStreamResponse) {
         option (google.api.http) = {
             get: "/namespaces/{namespace}/streams/{stream.stream_id}"
@@ -2075,15 +2075,76 @@ service WorkflowService {
         };
     }
 
-    // CloseStream closes a stream.
-    //
-    // Experimental placeholder.
+    // CloseStream closes a standalone stream. Experimental.
     rpc CloseStream (CloseStreamRequest) returns (CloseStreamResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/streams/{stream.stream_id}/close"
             body: "*"
             additional_bindings {
                 post: "/api/v1/namespaces/{namespace}/streams/{stream.stream_id}/close"
+                body: "*"
+            }
+        };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "stream:{stream.stream_id}"
+        };
+    }
+
+    // PollStream reads records of a native stream, optionally waiting for new ones. Experimental.
+    rpc PollStream (PollStreamRequest) returns (PollStreamResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/streams/{stream.stream_id}/records"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/streams/{stream.stream_id}/records"
+            }
+        };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "stream:{stream.stream_id}"
+        };
+    }
+
+    // AppendStream appends records to a native stream. Experimental.
+    rpc AppendStream (AppendStreamRequest) returns (AppendStreamResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/streams/{stream.stream_id}/records"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/streams/{stream.stream_id}/records"
+                body: "*"
+            }
+        };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "stream:{stream.stream_id}"
+        };
+    }
+
+    // SubscribeStream registers a one-shot wake-up for a durable reader. Experimental.
+    rpc SubscribeStream (SubscribeStreamRequest) returns (SubscribeStreamResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/streams/{stream.stream_id}/subscribe"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/streams/{stream.stream_id}/subscribe"
+                body: "*"
+            }
+        };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "stream:{stream.stream_id}"
+        };
+    }
+
+    // ReportStreamState reports a Redis stream's max offset. Called by the StreamDriver.
+    // Experimental.
+    rpc ReportStreamState (ReportStreamStateRequest) returns (ReportStreamStateResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/streams/{stream.stream_id}/report-state"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/streams/{stream.stream_id}/report-state"
                 body: "*"
             }
         };

@@ -2428,8 +2428,7 @@
     },
     "/api/v1/namespaces/{namespace}/streams/{stream.streamId}": {
       "get": {
-        "summary": "DescribeStream returns information about a stream.",
-        "description": "Experimental placeholder.",
+        "summary": "DescribeStream returns a stream's settings, close state and max offset. Experimental.",
         "operationId": "DescribeStream2",
         "responses": {
           "200": {
@@ -2454,8 +2453,94 @@
           },
           {
             "name": "stream.streamId",
+            "description": "Unique within its owner. For a standalone stream, its business ID, unique among the\nnamespace's open standalone streams.",
             "in": "path",
             "required": true,
+            "type": "string"
+          },
+          {
+            "name": "stream.workflowExecution.workflowId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.workflowExecution.runId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.workflowActivity.workflowExecution.workflowId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.workflowActivity.workflowExecution.runId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.workflowActivity.activityId",
+            "description": "A stream outlives its activity, so activity IDs that own streams must be unique within the\nrun.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.execution.type",
+            "description": " - EXECUTION_TYPE_WORKFLOW: A workflow execution archetype.\n - EXECUTION_TYPE_ACTIVITY: An activity execution archetype. This is reserved for standalone activities.\n - EXECUTION_TYPE_NEXUS_OPERATION: A Nexus operation execution archetype. This is reserved for standalone Nexus operations.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "EXECUTION_TYPE_UNSPECIFIED",
+              "EXECUTION_TYPE_WORKFLOW",
+              "EXECUTION_TYPE_ACTIVITY",
+              "EXECUTION_TYPE_NEXUS_OPERATION"
+            ],
+            "default": "EXECUTION_TYPE_UNSPECIFIED"
+          },
+          {
+            "name": "stream.execution.businessId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.execution.runId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.firstExecutionRunId",
+            "description": "For workflow_execution only. If set, the request fails with NotFound unless the workflow's\nlatest run is in the chain started by this run, so that a ref to a stream of an earlier\nchain whose workflow ID has been reused does not reach the new chain's stream. Required for\na Redis stream, whose key contains it.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.runId",
+            "description": "For a standalone stream only. A closed standalone stream's ID can be reused, and the new\nstream gets a new run_id. Empty targets the latest run.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.redis.store",
+            "description": "One of the Redis stores configured in the SDK. Empty selects the default.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.redis.key",
+            "description": "The stream's key, derived by the SDK from the rest of the ref. It contains the namespace, a\nworkflow chain's first_execution_run_id and a standalone stream's run_id, so streams of two\nnamespaces, or of two incarnations of one stream ID, never share a key. A standalone\nstream's run_id comes from CreateStreamResponse, so the SDK calls CreateStream before it\nwrites to Redis. Carried so that readers need not derive it, and so that the UI can show it.",
+            "in": "query",
+            "required": false,
             "type": "string"
           }
         ],
@@ -2464,8 +2549,8 @@
         ]
       },
       "post": {
-        "summary": "CreateStream creates a stream.",
-        "description": "Experimental placeholder. Returns an `AlreadyExists` error if a stream with the same ID exists in this\nnamespace.",
+        "summary": "CreateStream creates a stream. Experimental.",
+        "description": "A standalone stream is created by any caller. An owned stream is created by its owner's\ncode. With STREAM_ID_CONFLICT_POLICY_FAIL, returns an `AlreadyExists` error if the stream\nexists.",
         "operationId": "CreateStream2",
         "responses": {
           "200": {
@@ -2490,6 +2575,7 @@
           },
           {
             "name": "stream.streamId",
+            "description": "Unique within its owner. For a standalone stream, its business ID, unique among the\nnamespace's open standalone streams.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -2510,8 +2596,7 @@
     },
     "/api/v1/namespaces/{namespace}/streams/{stream.streamId}/close": {
       "post": {
-        "summary": "CloseStream closes a stream.",
-        "description": "Experimental placeholder.",
+        "summary": "CloseStream closes a standalone stream. Experimental.",
         "operationId": "CloseStream2",
         "responses": {
           "200": {
@@ -2536,6 +2621,7 @@
           },
           {
             "name": "stream.streamId",
+            "description": "Unique within its owner. For a standalone stream, its business ID, unique among the\nnamespace's open standalone streams.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -2546,6 +2632,338 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/WorkflowServiceCloseStreamBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/namespaces/{namespace}/streams/{stream.streamId}/records": {
+      "get": {
+        "summary": "PollStream reads records of a native stream, optionally waiting for new ones. Experimental.",
+        "operationId": "PollStream2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PollStreamResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "stream.streamId",
+            "description": "Unique within its owner. For a standalone stream, its business ID, unique among the\nnamespace's open standalone streams.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "stream.workflowExecution.workflowId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.workflowExecution.runId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.workflowActivity.workflowExecution.workflowId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.workflowActivity.workflowExecution.runId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.workflowActivity.activityId",
+            "description": "A stream outlives its activity, so activity IDs that own streams must be unique within the\nrun.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.execution.type",
+            "description": " - EXECUTION_TYPE_WORKFLOW: A workflow execution archetype.\n - EXECUTION_TYPE_ACTIVITY: An activity execution archetype. This is reserved for standalone activities.\n - EXECUTION_TYPE_NEXUS_OPERATION: A Nexus operation execution archetype. This is reserved for standalone Nexus operations.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "EXECUTION_TYPE_UNSPECIFIED",
+              "EXECUTION_TYPE_WORKFLOW",
+              "EXECUTION_TYPE_ACTIVITY",
+              "EXECUTION_TYPE_NEXUS_OPERATION"
+            ],
+            "default": "EXECUTION_TYPE_UNSPECIFIED"
+          },
+          {
+            "name": "stream.execution.businessId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.execution.runId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.firstExecutionRunId",
+            "description": "For workflow_execution only. If set, the request fails with NotFound unless the workflow's\nlatest run is in the chain started by this run, so that a ref to a stream of an earlier\nchain whose workflow ID has been reused does not reach the new chain's stream. Required for\na Redis stream, whose key contains it.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.runId",
+            "description": "For a standalone stream only. A closed standalone stream's ID can be reused, and the new\nstream gets a new run_id. Empty targets the latest run.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.redis.store",
+            "description": "One of the Redis stores configured in the SDK. Empty selects the default.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.redis.key",
+            "description": "The stream's key, derived by the SDK from the rest of the ref. It contains the namespace, a\nworkflow chain's first_execution_run_id and a standalone stream's run_id, so streams of two\nnamespaces, or of two incarnations of one stream ID, never share a key. A standalone\nstream's run_id comes from CreateStreamResponse, so the SDK calls CreateStream before it\nwrites to Redis. Carried so that readers need not derive it, and so that the UI can show it.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "lastReadOffset",
+            "description": "Return records after this offset. Empty means from the oldest retained record.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "byte"
+          },
+          {
+            "name": "newestRecords",
+            "description": "Return the newest this many records, then later ones. 0 returns only records appended\nafter this request.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "endOffset",
+            "description": "Exclusive. If set, return no record at or after this offset, and don't wait. A workflow\nreader records the range it read, and on replay reads exactly that range again.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "byte"
+          },
+          {
+            "name": "maximumPageSize",
+            "description": "0 means the server default.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "maximumPageBytes",
+            "description": "The most payload bytes in one page. A larger record is still returned alone. 0 means the\nserver default.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "waitNewRecords",
+            "description": "Long poll: wait until there is a record to return, or the stream closes. The server returns\nan empty response after about 60s.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "reader.workflowId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "reader.runId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "readerFloorOffset",
+            "description": "The lowest offset in the reader run's history. A run created by reset or continue-as-new\ninherits its first run's reads, so the floor comes from history, not from the run's first\nread.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "byte"
+          },
+          {
+            "name": "identity",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      },
+      "post": {
+        "summary": "AppendStream appends records to a native stream. Experimental.",
+        "operationId": "AppendStream2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AppendStreamResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "stream.streamId",
+            "description": "Unique within its owner. For a standalone stream, its business ID, unique among the\nnamespace's open standalone streams.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceAppendStreamBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/namespaces/{namespace}/streams/{stream.streamId}/report-state": {
+      "post": {
+        "summary": "ReportStreamState reports a Redis stream's max offset. Called by the StreamDriver.\nExperimental.",
+        "operationId": "ReportStreamState2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ReportStreamStateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "stream.streamId",
+            "description": "Unique within its owner. For a standalone stream, its business ID, unique among the\nnamespace's open standalone streams.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceReportStreamStateBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/namespaces/{namespace}/streams/{stream.streamId}/subscribe": {
+      "post": {
+        "summary": "SubscribeStream registers a one-shot wake-up for a durable reader. Experimental.",
+        "operationId": "SubscribeStream2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubscribeStreamResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "stream.streamId",
+            "description": "Unique within its owner. For a standalone stream, its business ID, unique among the\nnamespace's open standalone streams.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceSubscribeStreamBody"
             }
           }
         ],
@@ -8178,8 +8596,7 @@
     },
     "/namespaces/{namespace}/streams/{stream.streamId}": {
       "get": {
-        "summary": "DescribeStream returns information about a stream.",
-        "description": "Experimental placeholder.",
+        "summary": "DescribeStream returns a stream's settings, close state and max offset. Experimental.",
         "operationId": "DescribeStream",
         "responses": {
           "200": {
@@ -8204,8 +8621,94 @@
           },
           {
             "name": "stream.streamId",
+            "description": "Unique within its owner. For a standalone stream, its business ID, unique among the\nnamespace's open standalone streams.",
             "in": "path",
             "required": true,
+            "type": "string"
+          },
+          {
+            "name": "stream.workflowExecution.workflowId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.workflowExecution.runId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.workflowActivity.workflowExecution.workflowId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.workflowActivity.workflowExecution.runId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.workflowActivity.activityId",
+            "description": "A stream outlives its activity, so activity IDs that own streams must be unique within the\nrun.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.execution.type",
+            "description": " - EXECUTION_TYPE_WORKFLOW: A workflow execution archetype.\n - EXECUTION_TYPE_ACTIVITY: An activity execution archetype. This is reserved for standalone activities.\n - EXECUTION_TYPE_NEXUS_OPERATION: A Nexus operation execution archetype. This is reserved for standalone Nexus operations.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "EXECUTION_TYPE_UNSPECIFIED",
+              "EXECUTION_TYPE_WORKFLOW",
+              "EXECUTION_TYPE_ACTIVITY",
+              "EXECUTION_TYPE_NEXUS_OPERATION"
+            ],
+            "default": "EXECUTION_TYPE_UNSPECIFIED"
+          },
+          {
+            "name": "stream.execution.businessId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.execution.runId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.firstExecutionRunId",
+            "description": "For workflow_execution only. If set, the request fails with NotFound unless the workflow's\nlatest run is in the chain started by this run, so that a ref to a stream of an earlier\nchain whose workflow ID has been reused does not reach the new chain's stream. Required for\na Redis stream, whose key contains it.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.runId",
+            "description": "For a standalone stream only. A closed standalone stream's ID can be reused, and the new\nstream gets a new run_id. Empty targets the latest run.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.redis.store",
+            "description": "One of the Redis stores configured in the SDK. Empty selects the default.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.redis.key",
+            "description": "The stream's key, derived by the SDK from the rest of the ref. It contains the namespace, a\nworkflow chain's first_execution_run_id and a standalone stream's run_id, so streams of two\nnamespaces, or of two incarnations of one stream ID, never share a key. A standalone\nstream's run_id comes from CreateStreamResponse, so the SDK calls CreateStream before it\nwrites to Redis. Carried so that readers need not derive it, and so that the UI can show it.",
+            "in": "query",
+            "required": false,
             "type": "string"
           }
         ],
@@ -8214,8 +8717,8 @@
         ]
       },
       "post": {
-        "summary": "CreateStream creates a stream.",
-        "description": "Experimental placeholder. Returns an `AlreadyExists` error if a stream with the same ID exists in this\nnamespace.",
+        "summary": "CreateStream creates a stream. Experimental.",
+        "description": "A standalone stream is created by any caller. An owned stream is created by its owner's\ncode. With STREAM_ID_CONFLICT_POLICY_FAIL, returns an `AlreadyExists` error if the stream\nexists.",
         "operationId": "CreateStream",
         "responses": {
           "200": {
@@ -8240,6 +8743,7 @@
           },
           {
             "name": "stream.streamId",
+            "description": "Unique within its owner. For a standalone stream, its business ID, unique among the\nnamespace's open standalone streams.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -8260,8 +8764,7 @@
     },
     "/namespaces/{namespace}/streams/{stream.streamId}/close": {
       "post": {
-        "summary": "CloseStream closes a stream.",
-        "description": "Experimental placeholder.",
+        "summary": "CloseStream closes a standalone stream. Experimental.",
         "operationId": "CloseStream",
         "responses": {
           "200": {
@@ -8286,6 +8789,7 @@
           },
           {
             "name": "stream.streamId",
+            "description": "Unique within its owner. For a standalone stream, its business ID, unique among the\nnamespace's open standalone streams.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -8296,6 +8800,338 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/WorkflowServiceCloseStreamBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/streams/{stream.streamId}/records": {
+      "get": {
+        "summary": "PollStream reads records of a native stream, optionally waiting for new ones. Experimental.",
+        "operationId": "PollStream",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PollStreamResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "stream.streamId",
+            "description": "Unique within its owner. For a standalone stream, its business ID, unique among the\nnamespace's open standalone streams.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "stream.workflowExecution.workflowId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.workflowExecution.runId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.workflowActivity.workflowExecution.workflowId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.workflowActivity.workflowExecution.runId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.workflowActivity.activityId",
+            "description": "A stream outlives its activity, so activity IDs that own streams must be unique within the\nrun.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.execution.type",
+            "description": " - EXECUTION_TYPE_WORKFLOW: A workflow execution archetype.\n - EXECUTION_TYPE_ACTIVITY: An activity execution archetype. This is reserved for standalone activities.\n - EXECUTION_TYPE_NEXUS_OPERATION: A Nexus operation execution archetype. This is reserved for standalone Nexus operations.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "EXECUTION_TYPE_UNSPECIFIED",
+              "EXECUTION_TYPE_WORKFLOW",
+              "EXECUTION_TYPE_ACTIVITY",
+              "EXECUTION_TYPE_NEXUS_OPERATION"
+            ],
+            "default": "EXECUTION_TYPE_UNSPECIFIED"
+          },
+          {
+            "name": "stream.execution.businessId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.execution.runId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.firstExecutionRunId",
+            "description": "For workflow_execution only. If set, the request fails with NotFound unless the workflow's\nlatest run is in the chain started by this run, so that a ref to a stream of an earlier\nchain whose workflow ID has been reused does not reach the new chain's stream. Required for\na Redis stream, whose key contains it.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.runId",
+            "description": "For a standalone stream only. A closed standalone stream's ID can be reused, and the new\nstream gets a new run_id. Empty targets the latest run.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.redis.store",
+            "description": "One of the Redis stores configured in the SDK. Empty selects the default.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "stream.redis.key",
+            "description": "The stream's key, derived by the SDK from the rest of the ref. It contains the namespace, a\nworkflow chain's first_execution_run_id and a standalone stream's run_id, so streams of two\nnamespaces, or of two incarnations of one stream ID, never share a key. A standalone\nstream's run_id comes from CreateStreamResponse, so the SDK calls CreateStream before it\nwrites to Redis. Carried so that readers need not derive it, and so that the UI can show it.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "lastReadOffset",
+            "description": "Return records after this offset. Empty means from the oldest retained record.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "byte"
+          },
+          {
+            "name": "newestRecords",
+            "description": "Return the newest this many records, then later ones. 0 returns only records appended\nafter this request.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "endOffset",
+            "description": "Exclusive. If set, return no record at or after this offset, and don't wait. A workflow\nreader records the range it read, and on replay reads exactly that range again.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "byte"
+          },
+          {
+            "name": "maximumPageSize",
+            "description": "0 means the server default.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "maximumPageBytes",
+            "description": "The most payload bytes in one page. A larger record is still returned alone. 0 means the\nserver default.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "waitNewRecords",
+            "description": "Long poll: wait until there is a record to return, or the stream closes. The server returns\nan empty response after about 60s.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "reader.workflowId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "reader.runId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "readerFloorOffset",
+            "description": "The lowest offset in the reader run's history. A run created by reset or continue-as-new\ninherits its first run's reads, so the floor comes from history, not from the run's first\nread.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "byte"
+          },
+          {
+            "name": "identity",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      },
+      "post": {
+        "summary": "AppendStream appends records to a native stream. Experimental.",
+        "operationId": "AppendStream",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AppendStreamResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "stream.streamId",
+            "description": "Unique within its owner. For a standalone stream, its business ID, unique among the\nnamespace's open standalone streams.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceAppendStreamBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/streams/{stream.streamId}/report-state": {
+      "post": {
+        "summary": "ReportStreamState reports a Redis stream's max offset. Called by the StreamDriver.\nExperimental.",
+        "operationId": "ReportStreamState",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ReportStreamStateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "stream.streamId",
+            "description": "Unique within its owner. For a standalone stream, its business ID, unique among the\nnamespace's open standalone streams.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceReportStreamStateBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/streams/{stream.streamId}/subscribe": {
+      "post": {
+        "summary": "SubscribeStream registers a one-shot wake-up for a durable reader. Experimental.",
+        "operationId": "SubscribeStream",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubscribeStreamResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "stream.streamId",
+            "description": "Unique within its owner. For a standalone stream, its business ID, unique among the\nnamespace's open standalone streams.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceSubscribeStreamBody"
             }
           }
         ],
@@ -11850,15 +12686,115 @@
       },
       "description": "Activity trigger will be triggered when an activity is about to start."
     },
+    "WorkflowServiceAppendStreamBody": {
+      "type": "object",
+      "properties": {
+        "stream": {
+          "type": "object",
+          "properties": {
+            "workflowExecution": {
+              "$ref": "#/definitions/v1WorkflowExecution",
+              "description": "A workflow chain. run_id must be empty: the ref resolves to the chain's latest run. On\ncontinue-as-new the stream moves to the new run, so readers and offsets are unaffected."
+            },
+            "workflowActivity": {
+              "$ref": "#/definitions/v1WorkflowActivityRef",
+              "description": "An activity scheduled by a workflow run."
+            },
+            "execution": {
+              "$ref": "#/definitions/v1Execution",
+              "description": "A standalone execution. type must be EXECUTION_TYPE_ACTIVITY."
+            },
+            "firstExecutionRunId": {
+              "type": "string",
+              "description": "For workflow_execution only. If set, the request fails with NotFound unless the workflow's\nlatest run is in the chain started by this run, so that a ref to a stream of an earlier\nchain whose workflow ID has been reused does not reach the new chain's stream. Required for\na Redis stream, whose key contains it."
+            },
+            "runId": {
+              "type": "string",
+              "description": "For a standalone stream only. A closed standalone stream's ID can be reused, and the new\nstream gets a new run_id. Empty targets the latest run."
+            },
+            "redis": {
+              "$ref": "#/definitions/v1RedisStreamLocation",
+              "description": "Set when the stream's records are stored in Redis. The server then rejects AppendStream and\nPollStream for the stream."
+            }
+          },
+          "description": "Identifies a stream. Experimental.\n\nA stream either has an owner execution or is standalone. An owned stream is created by its\nowner, is closed by the server when its owner closes, and is deleted with its owner. A\nstandalone stream is an execution of its own.\n\nResolved in the namespace of the request that carries it. Passed as workflow, activity and\noperation input, and written into records."
+        },
+        "producer": {
+          "$ref": "#/definitions/v1ProducerAttempt",
+          "description": "Built by the SDK."
+        },
+        "taskToken": {
+          "type": "string",
+          "format": "byte",
+          "description": "Activities and workflow tasks: the attempt's task token; for a local activity, the token of\nthe workflow task attempt it runs in. When the producer is in the stream's own execution,\nthe server checks that the token is current and matches producer, and rejects the append\nwith STREAM_ERROR_REASON_PRODUCER_ATTEMPT_NOT_CURRENT otherwise."
+        },
+        "firstSeq": {
+          "type": "string",
+          "format": "int64",
+          "description": "Sequence number, within the producer attempt, of the first payload. Starts at 0."
+        },
+        "payloads": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Payload"
+          },
+          "description": "One data record per payload."
+        },
+        "identity": {
+          "type": "string"
+        }
+      },
+      "description": "Appends records to a native stream. Experimental.\n\nThe store keeps, per producer attempt, the next sequence number and the last batch's first\nsequence number, count, content digest and offsets. A resend of the last batch returns its\noriginal offsets; the same first_seq with different content fails with\nSTREAM_ERROR_REASON_SEQUENCE_CONTENT_MISMATCH; the next sequence number is written; anything\nelse fails with STREAM_ERROR_REASON_INVALID_SEQUENCE. A producer sends at most one append at a\ntime.\n\nThe first append of a producer attempt writes ProducerAttemptStarted before its records. If the\nstore has seen an earlier attempt of the same activity or workflow task that has no Ended\nevent, it first writes ProducerAttemptEnded with outcome SUPERSEDED, and rejects that attempt\nfrom then on.\n\nWorkflow code appends from the worker, within the workflow task and outside the activation.\nAppends take the owner's lock at low priority, so that signals and updates are not delayed."
+    },
     "WorkflowServiceCloseStreamBody": {
       "type": "object",
       "properties": {
         "stream": {
           "type": "object",
-          "description": "Identifies a stream.\n\nExperimental placeholder: this message will gain fields identifying the stream's owner, its run,\nand where its records are stored."
+          "properties": {
+            "workflowExecution": {
+              "$ref": "#/definitions/v1WorkflowExecution",
+              "description": "A workflow chain. run_id must be empty: the ref resolves to the chain's latest run. On\ncontinue-as-new the stream moves to the new run, so readers and offsets are unaffected."
+            },
+            "workflowActivity": {
+              "$ref": "#/definitions/v1WorkflowActivityRef",
+              "description": "An activity scheduled by a workflow run."
+            },
+            "execution": {
+              "$ref": "#/definitions/v1Execution",
+              "description": "A standalone execution. type must be EXECUTION_TYPE_ACTIVITY."
+            },
+            "firstExecutionRunId": {
+              "type": "string",
+              "description": "For workflow_execution only. If set, the request fails with NotFound unless the workflow's\nlatest run is in the chain started by this run, so that a ref to a stream of an earlier\nchain whose workflow ID has been reused does not reach the new chain's stream. Required for\na Redis stream, whose key contains it."
+            },
+            "runId": {
+              "type": "string",
+              "description": "For a standalone stream only. A closed standalone stream's ID can be reused, and the new\nstream gets a new run_id. Empty targets the latest run."
+            },
+            "redis": {
+              "$ref": "#/definitions/v1RedisStreamLocation",
+              "description": "Set when the stream's records are stored in Redis. The server then rejects AppendStream and\nPollStream for the stream."
+            }
+          },
+          "description": "Identifies a stream. Experimental.\n\nA stream either has an owner execution or is standalone. An owned stream is created by its\nowner, is closed by the server when its owner closes, and is deleted with its owner. A\nstandalone stream is an execution of its own.\n\nResolved in the namespace of the request that carries it. Passed as workflow, activity and\noperation input, and written into records."
+        },
+        "result": {
+          "$ref": "#/definitions/v1Payload"
+        },
+        "failure": {
+          "$ref": "#/definitions/apiFailureV1Failure"
+        },
+        "identity": {
+          "type": "string"
+        },
+        "requestId": {
+          "type": "string",
+          "description": "A retried close succeeds. A close with a different request_id on a closed stream fails with\nSTREAM_ERROR_REASON_CLOSED."
         }
       },
-      "description": "Experimental placeholder: fields other than the stream's identity will be added."
+      "description": "Closes a standalone stream, with status COMPLETED, or FAILED if failure is set. Experimental.\n\nAn owned stream is closed only by its owner: the server closes it when the owner closes, and\nworkflow code can close it earlier with the CloseStream System Nexus operation, which commits\nwith its workflow task. This method fails with STREAM_ERROR_REASON_NOT_OWNER for an owned\nstream. Activities do not close streams: an activity can be retried, and a close can't be\nwithdrawn.\n\nFor a Redis stream, the close is state of the server's Stream component, which readers confirm\nwith DescribeStream or SubscribeStream. The SDK afterwards marks the stream closed in Redis, as\na hint that saves readers from waiting for a long poll to time out."
     },
     "WorkflowServiceCreateScheduleBody": {
       "type": "object",
@@ -11893,14 +12829,50 @@
       "properties": {
         "stream": {
           "type": "object",
-          "description": "Identifies a stream.\n\nExperimental placeholder: this message will gain fields identifying the stream's owner, its run,\nand where its records are stored."
+          "properties": {
+            "workflowExecution": {
+              "$ref": "#/definitions/v1WorkflowExecution",
+              "description": "A workflow chain. run_id must be empty: the ref resolves to the chain's latest run. On\ncontinue-as-new the stream moves to the new run, so readers and offsets are unaffected."
+            },
+            "workflowActivity": {
+              "$ref": "#/definitions/v1WorkflowActivityRef",
+              "description": "An activity scheduled by a workflow run."
+            },
+            "execution": {
+              "$ref": "#/definitions/v1Execution",
+              "description": "A standalone execution. type must be EXECUTION_TYPE_ACTIVITY."
+            },
+            "firstExecutionRunId": {
+              "type": "string",
+              "description": "For workflow_execution only. If set, the request fails with NotFound unless the workflow's\nlatest run is in the chain started by this run, so that a ref to a stream of an earlier\nchain whose workflow ID has been reused does not reach the new chain's stream. Required for\na Redis stream, whose key contains it."
+            },
+            "runId": {
+              "type": "string",
+              "description": "For a standalone stream only. A closed standalone stream's ID can be reused, and the new\nstream gets a new run_id. Empty targets the latest run."
+            },
+            "redis": {
+              "$ref": "#/definitions/v1RedisStreamLocation",
+              "description": "Set when the stream's records are stored in Redis. The server then rejects AppendStream and\nPollStream for the stream."
+            }
+          },
+          "description": "For a standalone stream, run_id must be empty; the server assigns it. An owned stream can\nonly be created by its owner: a workflow through workflow code, and an activity through its\nown code."
         },
         "requestId": {
           "type": "string",
-          "description": "Used to de-dupe create requests."
+          "description": "A retried request with the same request_id gets the same response."
+        },
+        "settings": {
+          "$ref": "#/definitions/v1StreamSettings"
+        },
+        "idConflictPolicy": {
+          "$ref": "#/definitions/v1StreamIdConflictPolicy",
+          "description": "What to do if the stream already exists. Unspecified is FAIL."
+        },
+        "identity": {
+          "type": "string"
         }
       },
-      "description": "Experimental placeholder: fields other than the stream's identity will be added."
+      "description": "Experimental."
     },
     "WorkflowServiceCreateWorkerDeploymentBody": {
       "type": "object",
@@ -12178,6 +13150,49 @@
           "description": "Resource ID for routing. Contains the worker grouping key."
         }
       }
+    },
+    "WorkflowServiceReportStreamStateBody": {
+      "type": "object",
+      "properties": {
+        "stream": {
+          "type": "object",
+          "properties": {
+            "workflowExecution": {
+              "$ref": "#/definitions/v1WorkflowExecution",
+              "description": "A workflow chain. run_id must be empty: the ref resolves to the chain's latest run. On\ncontinue-as-new the stream moves to the new run, so readers and offsets are unaffected."
+            },
+            "workflowActivity": {
+              "$ref": "#/definitions/v1WorkflowActivityRef",
+              "description": "An activity scheduled by a workflow run."
+            },
+            "execution": {
+              "$ref": "#/definitions/v1Execution",
+              "description": "A standalone execution. type must be EXECUTION_TYPE_ACTIVITY."
+            },
+            "firstExecutionRunId": {
+              "type": "string",
+              "description": "For workflow_execution only. If set, the request fails with NotFound unless the workflow's\nlatest run is in the chain started by this run, so that a ref to a stream of an earlier\nchain whose workflow ID has been reused does not reach the new chain's stream. Required for\na Redis stream, whose key contains it."
+            },
+            "runId": {
+              "type": "string",
+              "description": "For a standalone stream only. A closed standalone stream's ID can be reused, and the new\nstream gets a new run_id. Empty targets the latest run."
+            },
+            "redis": {
+              "$ref": "#/definitions/v1RedisStreamLocation",
+              "description": "Set when the stream's records are stored in Redis. The server then rejects AppendStream and\nPollStream for the stream."
+            }
+          },
+          "description": "Identifies a stream. Experimental.\n\nA stream either has an owner execution or is standalone. An owned stream is created by its\nowner, is closed by the server when its owner closes, and is deleted with its owner. A\nstandalone stream is an execution of its own.\n\nResolved in the namespace of the request that carries it. Passed as workflow, activity and\noperation input, and written into records."
+        },
+        "maxOffset": {
+          "type": "string",
+          "format": "byte"
+        },
+        "identity": {
+          "type": "string"
+        }
+      },
+      "description": "Redis streams only; called by the StreamDriver, which reads the outbox that producers' appends\nwrite in Redis. Experimental.\n\nThe server keeps the highest max_offset reported, records it even when nobody is subscribed,\nfires subscriptions whose last_read_offset is below it, and may hold the call while it debounces\nreports. The StreamDriver acknowledges an outbox entry only after this call succeeds."
     },
     "WorkflowServiceRequestCancelActivityExecutionBody": {
       "type": "object",
@@ -13213,6 +14228,62 @@
         }
       }
     },
+    "WorkflowServiceSubscribeStreamBody": {
+      "type": "object",
+      "properties": {
+        "stream": {
+          "type": "object",
+          "properties": {
+            "workflowExecution": {
+              "$ref": "#/definitions/v1WorkflowExecution",
+              "description": "A workflow chain. run_id must be empty: the ref resolves to the chain's latest run. On\ncontinue-as-new the stream moves to the new run, so readers and offsets are unaffected."
+            },
+            "workflowActivity": {
+              "$ref": "#/definitions/v1WorkflowActivityRef",
+              "description": "An activity scheduled by a workflow run."
+            },
+            "execution": {
+              "$ref": "#/definitions/v1Execution",
+              "description": "A standalone execution. type must be EXECUTION_TYPE_ACTIVITY."
+            },
+            "firstExecutionRunId": {
+              "type": "string",
+              "description": "For workflow_execution only. If set, the request fails with NotFound unless the workflow's\nlatest run is in the chain started by this run, so that a ref to a stream of an earlier\nchain whose workflow ID has been reused does not reach the new chain's stream. Required for\na Redis stream, whose key contains it."
+            },
+            "runId": {
+              "type": "string",
+              "description": "For a standalone stream only. A closed standalone stream's ID can be reused, and the new\nstream gets a new run_id. Empty targets the latest run."
+            },
+            "redis": {
+              "$ref": "#/definitions/v1RedisStreamLocation",
+              "description": "Set when the stream's records are stored in Redis. The server then rejects AppendStream and\nPollStream for the stream."
+            }
+          },
+          "description": "Identifies a stream. Experimental.\n\nA stream either has an owner execution or is standalone. An owned stream is created by its\nowner, is closed by the server when its owner closes, and is deleted with its owner. A\nstandalone stream is an execution of its own.\n\nResolved in the namespace of the request that carries it. Passed as workflow, activity and\noperation input, and written into records."
+        },
+        "lastReadOffset": {
+          "type": "string",
+          "format": "byte",
+          "description": "The offset of the last record the reader has read; empty if it has read none. A native\nstream rejects an offset beyond its max offset."
+        },
+        "callback": {
+          "$ref": "#/definitions/commonV1Callback",
+          "description": "Where the wake-up is delivered, as in StartWorkflowExecutionRequest.completion_callbacks. A\nworker reader uses the Nexus handler variant."
+        },
+        "maximumWait": {
+          "type": "string",
+          "description": "When the subscription fires if nothing else fires it first. Capped by the server; unset\nmeans the server default. A lost report then delays a reader instead of stranding it."
+        },
+        "identity": {
+          "type": "string"
+        },
+        "requestId": {
+          "type": "string",
+          "description": "A retried subscribe with the same request_id creates no second subscription."
+        }
+      },
+      "description": "Subscribes a durable reader: a workflow, a standalone Nexus operation, or a worker reached by a\nNexus handler callback. Experimental.\n\nThe subscription fires once: when the stream has a record after last_read_offset, when the\nstream closes, or when maximum_wait passes. A reader treats every wake-up as a hint and reads\nagain.\n\nWorkflow code subscribes with the SubscribeStream System Nexus operation\n(__temporal_system / temporal.api.stream.v1.StreamService / SubscribeStream), whose input is\nthis request with callback, identity and request_id unset; the operation's completion callback\nand Nexus request ID are used instead, and its output is StreamMoved. The service is not\nWorkflowService because the workflow library already registers that Nexus service name."
+    },
     "WorkflowServiceTerminateActivityExecutionBody": {
       "type": "object",
       "properties": {
@@ -14041,6 +15112,28 @@
         }
       }
     },
+    "v1ActivityAttempt": {
+      "type": "object",
+      "properties": {
+        "workflowActivity": {
+          "$ref": "#/definitions/v1WorkflowActivityRef"
+        },
+        "execution": {
+          "$ref": "#/definitions/v1Execution",
+          "description": "A standalone activity. type is EXECUTION_TYPE_ACTIVITY."
+        },
+        "attemptStamp": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Identifies the attempt and orders the activity's attempts, including across an activity\nreset (PollActivityTaskQueueResponse.attempt_stamp).\nOpen: the stamp also changes during an attempt, on pause or an options update. Producers need\na value that changes exactly once per attempt."
+        },
+        "attemptNumber": {
+          "type": "integer",
+          "format": "int32",
+          "description": "For display only: an activity reset restarts it at 1."
+        }
+      }
+    },
     "v1ActivityExecutionInfo": {
       "type": "object",
       "properties": {
@@ -14657,6 +15750,20 @@
         }
       },
       "description": "Alert contains notification and severity."
+    },
+    "v1AppendStreamResponse": {
+      "type": "object",
+      "properties": {
+        "offsets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "byte"
+          },
+          "description": "One per payload. A resent batch gets back the original offsets."
+        }
+      },
+      "description": "Experimental."
     },
     "v1ApplicationErrorCategory": {
       "type": "string",
@@ -15353,9 +16460,43 @@
         }
       }
     },
+    "v1ClientAttempt": {
+      "type": "object",
+      "properties": {
+        "producerId": {
+          "type": "string",
+          "description": "Chosen by the client."
+        },
+        "attemptNumber": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Chosen by the client. Higher is newer."
+        }
+      },
+      "description": "A producer outside any execution. The store writes no events for client producers."
+    },
     "v1CloseStreamResponse": {
       "type": "object",
-      "description": "Experimental placeholder."
+      "description": "Experimental."
+    },
+    "v1Closed": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/v1StreamCloseStatus"
+        },
+        "result": {
+          "$ref": "#/definitions/v1Payload"
+        },
+        "failure": {
+          "$ref": "#/definitions/v1Failure"
+        },
+        "closeTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "A stream's close. Stored in its Stream component, and returned identically to live and late\nreaders. A reset of a workflow chain to a point before the close reopens the stream."
     },
     "v1ClusterReplicationConfig": {
       "type": "object",
@@ -15735,7 +16876,21 @@
     },
     "v1CreateStreamResponse": {
       "type": "object",
-      "description": "Experimental placeholder."
+      "properties": {
+        "stream": {
+          "$ref": "#/definitions/v1StreamRef",
+          "description": "The stream's ref, with run_id set for a standalone stream."
+        },
+        "created": {
+          "type": "boolean",
+          "description": "False if the stream already existed (USE_EXISTING)."
+        },
+        "settings": {
+          "$ref": "#/definitions/v1StreamSettings",
+          "description": "The stream's actual settings."
+        }
+      },
+      "description": "Experimental."
     },
     "v1CreateWorkerDeploymentResponse": {
       "type": "object",
@@ -15772,6 +16927,19 @@
         "data": {
           "type": "string",
           "format": "byte"
+        }
+      }
+    },
+    "v1DataRecord": {
+      "type": "object",
+      "properties": {
+        "producer": {
+          "$ref": "#/definitions/v1ProducerAttempt",
+          "description": "Set by the store from the append."
+        },
+        "payload": {
+          "$ref": "#/definitions/v1Payload",
+          "description": "Encoded by the data converter and codec; never interpreted by the server."
         }
       }
     },
@@ -16112,7 +17280,41 @@
     },
     "v1DescribeStreamResponse": {
       "type": "object",
-      "description": "Experimental placeholder: the stream's description will be added."
+      "properties": {
+        "stream": {
+          "$ref": "#/definitions/v1StreamRef",
+          "description": "The stream's ref, with run_id set for a standalone stream."
+        },
+        "settings": {
+          "$ref": "#/definitions/v1StreamSettings"
+        },
+        "closed": {
+          "$ref": "#/definitions/v1Closed",
+          "description": "Set once the stream is closed: its status, outcome and close time. This includes a Redis\nstream that the server closed with no close in Redis, for example when its owner was\nterminated."
+        },
+        "maxOffset": {
+          "type": "string",
+          "format": "byte",
+          "description": "The newest offset the server knows. For a Redis stream, the highest the StreamDriver has\nreported, which may lag."
+        },
+        "earliestOffset": {
+          "type": "string",
+          "format": "byte",
+          "description": "The oldest retained offset. Native streams only."
+        },
+        "pendingSubscriptions": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "creatorIdentity": {
+          "type": "string"
+        }
+      },
+      "description": "Experimental."
     },
     "v1DescribeTaskQueueMode": {
       "type": "string",
@@ -18864,6 +20066,11 @@
         "propagatedNexusSerializationContext": {
           "$ref": "#/definitions/v1PropagatedSerializationContext",
           "description": "Serialization context propagated from the Nexus caller that started this activity."
+        },
+        "attemptStamp": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Identifies this attempt among the activity's attempts, including across an activity reset,\nwhich restarts `attempt` at 1. Also in the task token, which SDKs don't decode; exposed so that\nstream producers can identify their attempt to stores that can't decode task tokens.\nExperimental."
         }
       }
     },
@@ -18895,6 +20102,33 @@
           "description": "The failure if the operation completed unsuccessfully."
         }
       }
+    },
+    "v1PollStreamResponse": {
+      "type": "object",
+      "properties": {
+        "records": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1StreamRecord"
+          },
+          "description": "The reader's next last_read_offset is the offset of the last record it handles."
+        },
+        "closed": {
+          "$ref": "#/definitions/v1Closed",
+          "description": "Set once the stream is closed. The reader is done when this is set and it has read up to\nmax_offset."
+        },
+        "maxOffset": {
+          "type": "string",
+          "format": "byte",
+          "description": "The stream's max offset when the response was produced. A reader that polled with\nnewest_records and got no records continues from here."
+        },
+        "continueAsNewSuggested": {
+          "type": "boolean",
+          "description": "The records kept for this reader run's replay are near the server's limit. The reader\nshould continue as new, which moves its floor."
+        }
+      },
+      "description": "Experimental."
     },
     "v1PollWorkflowExecutionTimeSkippingResponse": {
       "type": "object",
@@ -19123,6 +20357,78 @@
       },
       "description": "Priority contains metadata that controls relative ordering of task processing\nwhen tasks are backed up in a queue. Initially, Priority will be used in\nmatching (workflow and activity) task queues. Later it may be used in history\ntask queues and in rate limiting decisions.\n\nPriority is attached to workflows and activities. By default, activities\ninherit Priority from the workflow that created them, but may override fields\nwhen an activity is started or modified.\n\nDespite being named \"Priority\", this message also contains fields that\ncontrol \"fairness\" mechanisms.\n\nFor all fields, the field not present or equal to zero/empty string means to\ninherit the value from the calling workflow, or if there is no calling\nworkflow, then use the default value.\n\nFor all fields other than fairness_key, the zero value isn't meaningful so\nthere's no confusion between inherit/default and a meaningful value. For\nfairness_key, the empty string will be interpreted as \"inherit\". This means\nthat if a workflow has a non-empty fairness key, you can't override the\nfairness key of its activity to the empty string.\n\nThe overall semantics of Priority are:\n1. First, consider \"priority\": higher priority (lower number) goes first.\n2. Then, consider fairness: try to dispatch tasks for different fairness keys\n   in proportion to their weight.\n\nApplications may use any subset of mechanisms that are useful to them and\nleave the other fields to use default values.\n\nNot all queues in the system may support the \"full\" semantics of all priority\nfields. (Currently only support in matching task queues is planned.)"
     },
+    "v1ProducerAttempt": {
+      "type": "object",
+      "properties": {
+        "activity": {
+          "$ref": "#/definitions/v1ActivityAttempt"
+        },
+        "workflowTask": {
+          "$ref": "#/definitions/v1WorkflowTaskAttempt",
+          "description": "Workflow code, and local activities, which append as the workflow task attempt they run\nin."
+        },
+        "client": {
+          "$ref": "#/definitions/v1ClientAttempt"
+        }
+      },
+      "description": "The producer attempt that wrote a record: the attempt itself is the producer. The activity,\nworkflow task or client ID groups a unit's attempts."
+    },
+    "v1ProducerAttemptEnded": {
+      "type": "object",
+      "properties": {
+        "outcome": {
+          "$ref": "#/definitions/v1ProducerAttemptOutcome"
+        },
+        "retryState": {
+          "$ref": "#/definitions/v1RetryState",
+          "description": "IN_PROGRESS means a retry follows. Unspecified when the writer doesn't know: for\nSUPERSEDED, and when the SDK reports the end."
+        },
+        "failure": {
+          "$ref": "#/definitions/v1Failure"
+        }
+      },
+      "description": "Written by the server in the transaction that ends the attempt, when the stream is in the\nproducer's own execution and the records are stored natively, or reach Redis through the\nserver. Otherwise written only as SUPERSEDED, when a later attempt of the same activity or\nworkflow task first appends; nothing is written for a final failure, or for a retry that never\nappends."
+    },
+    "v1ProducerAttemptOutcome": {
+      "type": "string",
+      "enum": [
+        "PRODUCER_ATTEMPT_OUTCOME_UNSPECIFIED",
+        "PRODUCER_ATTEMPT_OUTCOME_COMPLETED",
+        "PRODUCER_ATTEMPT_OUTCOME_FAILED",
+        "PRODUCER_ATTEMPT_OUTCOME_TIMED_OUT",
+        "PRODUCER_ATTEMPT_OUTCOME_CANCELED",
+        "PRODUCER_ATTEMPT_OUTCOME_TERMINATED",
+        "PRODUCER_ATTEMPT_OUTCOME_HANDED_OFF",
+        "PRODUCER_ATTEMPT_OUTCOME_RESET",
+        "PRODUCER_ATTEMPT_OUTCOME_RUN_CLOSED",
+        "PRODUCER_ATTEMPT_OUTCOME_SUPERSEDED"
+      ],
+      "default": "PRODUCER_ATTEMPT_OUTCOME_UNSPECIFIED",
+      "description": "How a producer attempt ended. Experimental.\n\n - PRODUCER_ATTEMPT_OUTCOME_HANDED_OFF: The activity reported that an external system will complete it.\n - PRODUCER_ATTEMPT_OUTCOME_RESET: An activity reset ended the attempt.\n - PRODUCER_ATTEMPT_OUTCOME_RUN_CLOSED: The attempt's workflow run closed or continued as new.\n - PRODUCER_ATTEMPT_OUTCOME_SUPERSEDED: A later attempt of the same activity or workflow task appended to the stream. The store\ndoesn't know how this attempt ended, only that it rejects the attempt's appends from now on."
+    },
+    "v1ProducerAttemptStarted": {
+      "type": "object"
+    },
+    "v1ProducerEvent": {
+      "type": "object",
+      "properties": {
+        "producer": {
+          "$ref": "#/definitions/v1ProducerAttempt"
+        },
+        "eventTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "started": {
+          "$ref": "#/definitions/v1ProducerAttemptStarted",
+          "description": "Written by the attempt's first append to the stream, before its records."
+        },
+        "ended": {
+          "$ref": "#/definitions/v1ProducerAttemptEnded"
+        }
+      },
+      "description": "Written by the store. A producer attempt's first record in the stream comes immediately after\nits Started event. If an Ended event is written, no record from the attempt comes after it: the\nstore rejects the attempt's appends from then on, in the same atomic step."
+    },
     "v1PropagatedSerializationContext": {
       "type": "object",
       "properties": {
@@ -19272,6 +20578,19 @@
     "v1RecordWorkerHeartbeatResponse": {
       "type": "object"
     },
+    "v1RedisStreamLocation": {
+      "type": "object",
+      "properties": {
+        "store": {
+          "type": "string",
+          "description": "One of the Redis stores configured in the SDK. Empty selects the default."
+        },
+        "key": {
+          "type": "string",
+          "description": "The stream's key, derived by the SDK from the rest of the ref. It contains the namespace, a\nworkflow chain's first_execution_run_id and a standalone stream's run_id, so streams of two\nnamespaces, or of two incarnations of one stream ID, never share a key. A standalone\nstream's run_id comes from CreateStreamResponse, so the SDK calls CreateStream before it\nwrites to Redis. Carried so that readers need not derive it, and so that the UI can show it."
+        }
+      }
+    },
     "v1RegisterNamespaceRequest": {
       "type": "object",
       "properties": {
@@ -19353,6 +20672,10 @@
         "REPLICATION_STATE_HANDOVER"
       ],
       "default": "REPLICATION_STATE_UNSPECIFIED"
+    },
+    "v1ReportStreamStateResponse": {
+      "type": "object",
+      "description": "Experimental."
     },
     "v1Request": {
       "type": "object",
@@ -20520,14 +21843,123 @@
         }
       }
     },
+    "v1StreamCloseStatus": {
+      "type": "string",
+      "enum": [
+        "STREAM_CLOSE_STATUS_UNSPECIFIED",
+        "STREAM_CLOSE_STATUS_COMPLETED",
+        "STREAM_CLOSE_STATUS_FAILED",
+        "STREAM_CLOSE_STATUS_CANCELED",
+        "STREAM_CLOSE_STATUS_TERMINATED",
+        "STREAM_CLOSE_STATUS_TIMED_OUT",
+        "STREAM_CLOSE_STATUS_IDLE",
+        "STREAM_CLOSE_STATUS_MAX_LIFETIME_REACHED"
+      ],
+      "default": "STREAM_CLOSE_STATUS_UNSPECIFIED",
+      "description": "Why a stream was closed. Experimental.\n\n - STREAM_CLOSE_STATUS_COMPLETED: Closed explicitly with a result or no outcome, or the owner completed.\n - STREAM_CLOSE_STATUS_FAILED: Closed explicitly with a failure, or the owner failed.\n - STREAM_CLOSE_STATUS_CANCELED: The owner was canceled.\n - STREAM_CLOSE_STATUS_TERMINATED: The owner was terminated.\n - STREAM_CLOSE_STATUS_TIMED_OUT: The owner timed out.\n - STREAM_CLOSE_STATUS_IDLE: No appends for the stream's idle_close_timeout.\n - STREAM_CLOSE_STATUS_MAX_LIFETIME_REACHED: The stream reached its max_lifetime."
+    },
+    "v1StreamIdConflictPolicy": {
+      "type": "string",
+      "enum": [
+        "STREAM_ID_CONFLICT_POLICY_UNSPECIFIED",
+        "STREAM_ID_CONFLICT_POLICY_FAIL",
+        "STREAM_ID_CONFLICT_POLICY_USE_EXISTING"
+      ],
+      "default": "STREAM_ID_CONFLICT_POLICY_UNSPECIFIED",
+      "description": "What CreateStream does when the stream already exists. Experimental.\n\n - STREAM_ID_CONFLICT_POLICY_FAIL: Fail with AlreadyExists. The default.\n - STREAM_ID_CONFLICT_POLICY_USE_EXISTING: Return the existing stream, ignoring the request's settings. Workflow code uses this,\nbecause every run of a chain creates its streams again."
+    },
+    "v1StreamMoved": {
+      "type": "object",
+      "properties": {
+        "maxOffset": {
+          "type": "string",
+          "format": "byte",
+          "description": "The stream's max offset when the wake-up was delivered."
+        },
+        "closed": {
+          "$ref": "#/definitions/v1Closed",
+          "description": "Set if the stream is closed. The reader treats the stream as closed even if it finds no\nclose in Redis: the server closes a Redis stream itself, for example when its owner is\nterminated."
+        }
+      },
+      "description": "Delivered to a subscription's callback, and returned by a subscribe that fires at once."
+    },
+    "v1StreamRecord": {
+      "type": "object",
+      "properties": {
+        "offset": {
+          "type": "string",
+          "format": "byte",
+          "description": "Assigned by the store. Opaque to applications, but two offsets of one stream compare\nbytewise, as unsigned bytes, in stream order, so readers, stores and the server can order\nthem without decoding them.\n\nA native offset is a fixed-width, big-endian namespace failover version followed by a\nfixed-width, big-endian sequence number. Offsets written on different branches after a\nnamespace failover have no meaningful order, and the server rejects an offset that is not on\nthe current branch (STREAM_ERROR_REASON_OFFSET_NOT_ON_BRANCH). A Redis offset is the entry\nID's milliseconds and sequence number as two big-endian uint64s."
+        },
+        "data": {
+          "$ref": "#/definitions/v1DataRecord"
+        },
+        "producerEvent": {
+          "$ref": "#/definitions/v1ProducerEvent"
+        }
+      },
+      "description": "One item that a read returns. Readers skip record kinds they don't recognize. A close is not a\nrecord: it is stream state, returned with reads (PollStreamResponse.closed)."
+    },
     "v1StreamRef": {
       "type": "object",
       "properties": {
         "streamId": {
-          "type": "string"
+          "type": "string",
+          "description": "Unique within its owner. For a standalone stream, its business ID, unique among the\nnamespace's open standalone streams."
+        },
+        "workflowExecution": {
+          "$ref": "#/definitions/v1WorkflowExecution",
+          "description": "A workflow chain. run_id must be empty: the ref resolves to the chain's latest run. On\ncontinue-as-new the stream moves to the new run, so readers and offsets are unaffected."
+        },
+        "workflowActivity": {
+          "$ref": "#/definitions/v1WorkflowActivityRef",
+          "description": "An activity scheduled by a workflow run."
+        },
+        "execution": {
+          "$ref": "#/definitions/v1Execution",
+          "description": "A standalone execution. type must be EXECUTION_TYPE_ACTIVITY."
+        },
+        "firstExecutionRunId": {
+          "type": "string",
+          "description": "For workflow_execution only. If set, the request fails with NotFound unless the workflow's\nlatest run is in the chain started by this run, so that a ref to a stream of an earlier\nchain whose workflow ID has been reused does not reach the new chain's stream. Required for\na Redis stream, whose key contains it."
+        },
+        "runId": {
+          "type": "string",
+          "description": "For a standalone stream only. A closed standalone stream's ID can be reused, and the new\nstream gets a new run_id. Empty targets the latest run."
+        },
+        "redis": {
+          "$ref": "#/definitions/v1RedisStreamLocation",
+          "description": "Set when the stream's records are stored in Redis. The server then rejects AppendStream and\nPollStream for the stream."
         }
       },
-      "description": "Identifies a stream.\n\nExperimental placeholder: this message will gain fields identifying the stream's owner, its run,\nand where its records are stored."
+      "description": "Identifies a stream. Experimental.\n\nA stream either has an owner execution or is standalone. An owned stream is created by its\nowner, is closed by the server when its owner closes, and is deleted with its owner. A\nstandalone stream is an execution of its own.\n\nResolved in the namespace of the request that carries it. Passed as workflow, activity and\noperation input, and written into records."
+    },
+    "v1StreamSettings": {
+      "type": "object",
+      "properties": {
+        "maxRecords": {
+          "type": "string",
+          "format": "int64",
+          "description": "Keep only the newest records, by count or by total payload size. 0 means no cap. Never drops\nrecords that an open workflow reader may re-read on replay."
+        },
+        "maxBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "idleCloseTimeout": {
+          "type": "string",
+          "description": "Close with status IDLE after this long with no appends. Unset: no idle close for an owned\nstream (its owner's end closes it), and a server default for a standalone stream. Zero:\nnever."
+        },
+        "maxLifetime": {
+          "type": "string",
+          "description": "Close with status MAX_LIFETIME_REACHED this long after the stream is created. Unset: none for\nan owned stream, and a server default for a standalone stream. Zero: never."
+        },
+        "subscriptionsEnabled": {
+          "type": "boolean",
+          "description": "Redis streams only: allow readers to subscribe. Producers then also write outbox entries,\nand a StreamDriver must run. Native streams always allow subscriptions, which cost nothing\nuntil a reader subscribes."
+        }
+      },
+      "description": "Settings fixed when a stream is created.\n\nRetention is not a stream setting. A closed standalone stream is deleted after the namespace's\nretention, and an owned stream is deleted with its owner. For a Redis stream, the store's\nconfiguration also sets how long Redis keeps the records, which must be at least as long."
     },
     "v1StructuredCalendarSpec": {
       "type": "object",
@@ -20594,6 +22026,16 @@
         }
       },
       "description": "StructuredCalendarSpec describes an event specification relative to the\ncalendar, in a form that's easy to work with programmatically. Each field can\nbe one or more ranges.\nA timestamp matches if at least one range of each field matches the\ncorresponding fields of the timestamp, except for year: if year is missing,\nthat means all years match. For all fields besides year, at least one Range\nmust be present to match anything.\nRelative expressions such as \"last day of the month\" or \"third Monday\" are not currently\nrepresentable; callers must enumerate the concrete days they require."
+    },
+    "v1SubscribeStreamResponse": {
+      "type": "object",
+      "properties": {
+        "fired": {
+          "$ref": "#/definitions/v1StreamMoved",
+          "description": "Set if the subscription fired at once; otherwise it was stored."
+        }
+      },
+      "description": "Experimental."
     },
     "v1SuggestContinueAsNewReason": {
       "type": "string",
@@ -21936,6 +23378,19 @@
       "default": "WORKER_VERSIONING_MODE_UNSPECIFIED",
       "description": "Versioning Mode of a worker is set by the app developer in the worker code, and specifies the\nbehavior of the system in the following related aspects:\n- Whether or not Temporal Server considers this worker's version (Build ID) when dispatching\n  tasks to it.\n- Whether or not the workflows processed by this worker are versioned using the worker's version.\n\n - WORKER_VERSIONING_MODE_UNVERSIONED: Workers with this mode are not distinguished from each other for task routing, even if they\nhave different Build IDs.\nWorkflows processed by this worker will be unversioned and user needs to use Patching to keep\nthe new code compatible with prior versions.\nThis mode is recommended to be used along with Rolling Upgrade deployment strategies.\nWorkers with this mode are represented by the special string `__unversioned__` in the APIs.\n - WORKER_VERSIONING_MODE_VERSIONED: Workers with this mode are part of a Worker Deployment Version which is identified as\n\"<deployment_name>.<build_id>\". Such workers are called \"versioned\" as opposed to\n\"unversioned\".\nEach Deployment Version is distinguished from other Versions for task routing and users can\nconfigure Temporal Server to send tasks to a particular Version (see\n`WorkerDeploymentInfo.routing_config`). This mode is the best option for Blue/Green and\nRainbow strategies (but typically not suitable for Rolling upgrades.)\nWorkflow Versioning Behaviors are enabled in this mode: each workflow type must choose\nbetween the Pinned and AutoUpgrade behaviors. Depending on the chosen behavior, the user may\nor may not need to use Patching to keep the new code compatible with prior versions. (see\nVersioningBehavior enum.)"
     },
+    "v1WorkflowActivityRef": {
+      "type": "object",
+      "properties": {
+        "workflowExecution": {
+          "$ref": "#/definitions/v1WorkflowExecution",
+          "description": "Workflow ID and run ID of the run that scheduled the activity."
+        },
+        "activityId": {
+          "type": "string",
+          "description": "A stream outlives its activity, so activity IDs that own streams must be unique within the\nrun."
+        }
+      }
+    },
     "v1WorkflowExecution": {
       "type": "object",
       "properties": {
@@ -22912,6 +24367,25 @@
           "description": "Expiration time of the rule. After this time, the rule will be deleted.\nCan be empty if the rule should never expire."
         }
       }
+    },
+    "v1WorkflowTaskAttempt": {
+      "type": "object",
+      "properties": {
+        "workflowExecution": {
+          "$ref": "#/definitions/v1WorkflowExecution",
+          "description": "Workflow ID and run ID."
+        },
+        "startedEventId": {
+          "type": "string",
+          "format": "int64",
+          "description": "The started event ID of this workflow task attempt."
+        },
+        "attemptNumber": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "description": "Ordered by (started_event_id, attempt_number). The attempt number alone restarts at 1 when the\nserver reschedules a failed workflow task after new events arrive.\n\nOpen: a local activity can keep running after its workflow task completes by heartbeat, and\nthen appends as a workflow task attempt that is no longer current."
     },
     "v1WorkflowTaskCompletedEventAttributes": {
       "type": "object",

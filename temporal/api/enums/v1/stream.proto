@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package temporal.api.enums.v1;
+
+option go_package = "go.temporal.io/api/enums/v1;enums";
+option java_package = "io.temporal.api.enums.v1";
+option java_multiple_files = true;
+option java_outer_classname = "StreamProto";
+option ruby_package = "Temporalio::Api::Enums::V1";
+option csharp_namespace = "Temporalio.Api.Enums.V1";
+
+// What CreateStream does when the stream already exists. Experimental.
+enum StreamIdConflictPolicy {
+    STREAM_ID_CONFLICT_POLICY_UNSPECIFIED = 0;
+    // Fail with AlreadyExists. The default.
+    STREAM_ID_CONFLICT_POLICY_FAIL = 1;
+    // Return the existing stream, ignoring the request's settings. Workflow code uses this,
+    // because every run of a chain creates its streams again.
+    STREAM_ID_CONFLICT_POLICY_USE_EXISTING = 2;
+}
+
+// Why a stream was closed. Experimental.
+// (-- api-linter: core::0216::synonyms=disabled
+//     aip.dev/not-precedent: Named consistently with WorkflowExecutionStatus. --)
+enum StreamCloseStatus {
+    STREAM_CLOSE_STATUS_UNSPECIFIED = 0;
+    // Closed explicitly with a result or no outcome, or the owner completed.
+    STREAM_CLOSE_STATUS_COMPLETED = 1;
+    // Closed explicitly with a failure, or the owner failed.
+    STREAM_CLOSE_STATUS_FAILED = 2;
+    // The owner was canceled.
+    STREAM_CLOSE_STATUS_CANCELED = 3;
+    // The owner was terminated.
+    STREAM_CLOSE_STATUS_TERMINATED = 4;
+    // The owner timed out.
+    STREAM_CLOSE_STATUS_TIMED_OUT = 5;
+    // No appends for the stream's idle_close_timeout.
+    STREAM_CLOSE_STATUS_IDLE = 6;
+    // The stream reached its max_lifetime.
+    STREAM_CLOSE_STATUS_MAX_LIFETIME_REACHED = 7;
+}
+
+// How a producer attempt ended. Experimental.
+enum ProducerAttemptOutcome {
+    PRODUCER_ATTEMPT_OUTCOME_UNSPECIFIED = 0;
+    PRODUCER_ATTEMPT_OUTCOME_COMPLETED = 1;
+    PRODUCER_ATTEMPT_OUTCOME_FAILED = 2;
+    PRODUCER_ATTEMPT_OUTCOME_TIMED_OUT = 3;
+    PRODUCER_ATTEMPT_OUTCOME_CANCELED = 4;
+    PRODUCER_ATTEMPT_OUTCOME_TERMINATED = 5;
+    // The activity reported that an external system will complete it.
+    PRODUCER_ATTEMPT_OUTCOME_HANDED_OFF = 6;
+    // An activity reset ended the attempt.
+    PRODUCER_ATTEMPT_OUTCOME_RESET = 7;
+    // The attempt's workflow run closed or continued as new.
+    PRODUCER_ATTEMPT_OUTCOME_RUN_CLOSED = 8;
+    // A later attempt of the same activity or workflow task appended to the stream. The store
+    // doesn't know how this attempt ended, only that it rejects the attempt's appends from now on.
+    PRODUCER_ATTEMPT_OUTCOME_SUPERSEDED = 9;
+}
+
+// Why a stream request failed, in StreamErrorDetails. Each reason has one gRPC status code, given
+// below. Experimental.
+enum StreamErrorReason {
+    STREAM_ERROR_REASON_UNSPECIFIED = 0;
+    // The stream is closed. FAILED_PRECONDITION.
+    STREAM_ERROR_REASON_CLOSED = 1;
+    // Only the owner may create or close an owned stream. PERMISSION_DENIED.
+    STREAM_ERROR_REASON_NOT_OWNER = 2;
+    // The producer attempt is not current: a later attempt of the same unit exists, the attempt
+    // has ended, or its run is not current. FAILED_PRECONDITION.
+    STREAM_ERROR_REASON_PRODUCER_ATTEMPT_NOT_CURRENT = 3;
+    // first_seq is neither the attempt's next sequence number nor a resend of its last batch.
+    // FAILED_PRECONDITION.
+    STREAM_ERROR_REASON_INVALID_SEQUENCE = 4;
+    // A resend of the attempt's last batch has different content. FAILED_PRECONDITION.
+    STREAM_ERROR_REASON_SEQUENCE_CONTENT_MISMATCH = 5;
+    // Records after the requested offset have been trimmed, or a workflow reader's recorded range
+    // is no longer retained. The details give the earliest retained offset. OUT_OF_RANGE.
+    STREAM_ERROR_REASON_OFFSET_TRIMMED = 6;
+    // The offset was written on a branch that a namespace failover discarded, or Redis lost it.
+    // The details give the last offset still valid. OUT_OF_RANGE.
+    STREAM_ERROR_REASON_OFFSET_NOT_ON_BRANCH = 7;
+    // A native stream's subscribe gave an offset beyond the stream's max offset. OUT_OF_RANGE.
+    STREAM_ERROR_REASON_OFFSET_BEYOND_MAX = 8;
+    // A Redis stream whose subscriptions_enabled is false. FAILED_PRECONDITION.
+    STREAM_ERROR_REASON_SUBSCRIPTIONS_DISABLED = 9;
+}

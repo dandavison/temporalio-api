@@ -9,10 +9,223 @@ option java_outer_classname = "MessageProto";
 option ruby_package = "Temporalio::Api::Stream::V1";
 option csharp_namespace = "Temporalio.Api.Stream.V1";
 
-// Identifies a stream.
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+import "temporal/api/common/v1/message.proto";
+import "temporal/api/enums/v1/stream.proto";
+import "temporal/api/enums/v1/workflow.proto";
+import "temporal/api/failure/v1/message.proto";
+
+// Identifies a stream. Experimental.
 //
-// Experimental placeholder: this message will gain fields identifying the stream's owner, its run,
-// and where its records are stored.
+// A stream either has an owner execution or is standalone. An owned stream is created by its
+// owner, is closed by the server when its owner closes, and is deleted with its owner. A
+// standalone stream is an execution of its own.
+//
+// Resolved in the namespace of the request that carries it. Passed as workflow, activity and
+// operation input, and written into records.
 message StreamRef {
+    // Unique within its owner. For a standalone stream, its business ID, unique among the
+    // namespace's open standalone streams.
     string stream_id = 1;
+    // The execution that owns the stream. Unset for a standalone stream.
+    oneof owner {
+        // A workflow chain. run_id must be empty: the ref resolves to the chain's latest run. On
+        // continue-as-new the stream moves to the new run, so readers and offsets are unaffected.
+        temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
+        // An activity scheduled by a workflow run.
+        WorkflowActivityRef workflow_activity = 3;
+        // A standalone execution. type must be EXECUTION_TYPE_ACTIVITY.
+        temporal.api.common.v1.Execution execution = 4;
+    }
+    // For workflow_execution only. If set, the request fails with NotFound unless the workflow's
+    // latest run is in the chain started by this run, so that a ref to a stream of an earlier
+    // chain whose workflow ID has been reused does not reach the new chain's stream. Required for
+    // a Redis stream, whose key contains it.
+    string first_execution_run_id = 5;
+    // For a standalone stream only. A closed standalone stream's ID can be reused, and the new
+    // stream gets a new run_id. Empty targets the latest run.
+    string run_id = 6;
+    // Set when the stream's records are stored in Redis. The server then rejects AppendStream and
+    // PollStream for the stream.
+    RedisStreamLocation redis = 7;
+}
+
+message WorkflowActivityRef {
+    // Workflow ID and run ID of the run that scheduled the activity.
+    temporal.api.common.v1.WorkflowExecution workflow_execution = 1;
+    // A stream outlives its activity, so activity IDs that own streams must be unique within the
+    // run.
+    string activity_id = 2;
+}
+
+message RedisStreamLocation {
+    // One of the Redis stores configured in the SDK. Empty selects the default.
+    string store = 1;
+    // The stream's key, derived by the SDK from the rest of the ref. It contains the namespace, a
+    // workflow chain's first_execution_run_id and a standalone stream's run_id, so streams of two
+    // namespaces, or of two incarnations of one stream ID, never share a key. A standalone
+    // stream's run_id comes from CreateStreamResponse, so the SDK calls CreateStream before it
+    // writes to Redis. Carried so that readers need not derive it, and so that the UI can show it.
+    string key = 2;
+}
+
+// Settings fixed when a stream is created.
+//
+// Retention is not a stream setting. A closed standalone stream is deleted after the namespace's
+// retention, and an owned stream is deleted with its owner. For a Redis stream, the store's
+// configuration also sets how long Redis keeps the records, which must be at least as long.
+message StreamSettings {
+    // Keep only the newest records, by count or by total payload size. 0 means no cap. Never drops
+    // records that an open workflow reader may re-read on replay.
+    int64 max_records = 1;
+    int64 max_bytes = 2;
+    // Close with status IDLE after this long with no appends. Unset: no idle close for an owned
+    // stream (its owner's end closes it), and a server default for a standalone stream. Zero:
+    // never.
+    google.protobuf.Duration idle_close_timeout = 3;
+    // Close with status MAX_LIFETIME_REACHED this long after the stream is created. Unset: none for
+    // an owned stream, and a server default for a standalone stream. Zero: never.
+    google.protobuf.Duration max_lifetime = 4;
+    // Redis streams only: allow readers to subscribe. Producers then also write outbox entries,
+    // and a StreamDriver must run. Native streams always allow subscriptions, which cost nothing
+    // until a reader subscribes.
+    bool subscriptions_enabled = 5;
+}
+
+// One item that a read returns. Readers skip record kinds they don't recognize. A close is not a
+// record: it is stream state, returned with reads (PollStreamResponse.closed).
+message StreamRecord {
+    // Assigned by the store. Opaque to applications, but two offsets of one stream compare
+    // bytewise, as unsigned bytes, in stream order, so readers, stores and the server can order
+    // them without decoding them.
+    //
+    // A native offset is a fixed-width, big-endian namespace failover version followed by a
+    // fixed-width, big-endian sequence number. Offsets written on different branches after a
+    // namespace failover have no meaningful order, and the server rejects an offset that is not on
+    // the current branch (STREAM_ERROR_REASON_OFFSET_NOT_ON_BRANCH). A Redis offset is the entry
+    // ID's milliseconds and sequence number as two big-endian uint64s.
+    bytes offset = 1;
+    oneof record {
+        DataRecord data = 2;
+        ProducerEvent producer_event = 3;
+    }
+}
+
+message DataRecord {
+    // Set by the store from the append.
+    ProducerAttempt producer = 1;
+    // Encoded by the data converter and codec; never interpreted by the server.
+    temporal.api.common.v1.Payload payload = 2;
+}
+
+// Written by the store. A producer attempt's first record in the stream comes immediately after
+// its Started event. If an Ended event is written, no record from the attempt comes after it: the
+// store rejects the attempt's appends from then on, in the same atomic step.
+message ProducerEvent {
+    ProducerAttempt producer = 1;
+    google.protobuf.Timestamp event_time = 2;
+    oneof event {
+        // Written by the attempt's first append to the stream, before its records.
+        ProducerAttemptStarted started = 3;
+        ProducerAttemptEnded ended = 4;
+    }
+}
+
+message ProducerAttemptStarted {
+}
+
+// Written by the server in the transaction that ends the attempt, when the stream is in the
+// producer's own execution and the records are stored natively, or reach Redis through the
+// server. Otherwise written only as SUPERSEDED, when a later attempt of the same activity or
+// workflow task first appends; nothing is written for a final failure, or for a retry that never
+// appends.
+message ProducerAttemptEnded {
+    temporal.api.enums.v1.ProducerAttemptOutcome outcome = 1;
+    // IN_PROGRESS means a retry follows. Unspecified when the writer doesn't know: for
+    // SUPERSEDED, and when the SDK reports the end.
+    temporal.api.enums.v1.RetryState retry_state = 2;
+    temporal.api.failure.v1.Failure failure = 3;
+}
+
+// The producer attempt that wrote a record: the attempt itself is the producer. The activity,
+// workflow task or client ID groups a unit's attempts.
+message ProducerAttempt {
+    oneof kind {
+        ActivityAttempt activity = 1;
+        // Workflow code, and local activities, which append as the workflow task attempt they run
+        // in.
+        WorkflowTaskAttempt workflow_task = 2;
+        ClientAttempt client = 3;
+    }
+}
+
+message ActivityAttempt {
+    oneof activity {
+        WorkflowActivityRef workflow_activity = 1;
+        // A standalone activity. type is EXECUTION_TYPE_ACTIVITY.
+        temporal.api.common.v1.Execution execution = 2;
+    }
+    // Identifies the attempt and orders the activity's attempts, including across an activity
+    // reset (PollActivityTaskQueueResponse.attempt_stamp).
+    // Open: the stamp also changes during an attempt, on pause or an options update. Producers need
+    // a value that changes exactly once per attempt.
+    int32 attempt_stamp = 3;
+    // For display only: an activity reset restarts it at 1.
+    int32 attempt_number = 4;
+}
+
+// Ordered by (started_event_id, attempt_number). The attempt number alone restarts at 1 when the
+// server reschedules a failed workflow task after new events arrive.
+//
+// Open: a local activity can keep running after its workflow task completes by heartbeat, and
+// then appends as a workflow task attempt that is no longer current.
+message WorkflowTaskAttempt {
+    // Workflow ID and run ID.
+    temporal.api.common.v1.WorkflowExecution workflow_execution = 1;
+    // The started event ID of this workflow task attempt.
+    int64 started_event_id = 2;
+    int32 attempt_number = 3;
+}
+
+// A producer outside any execution. The store writes no events for client producers.
+message ClientAttempt {
+    // Chosen by the client.
+    string producer_id = 1;
+    // Chosen by the client. Higher is newer.
+    int32 attempt_number = 2;
+}
+
+// A stream's close. Stored in its Stream component, and returned identically to live and late
+// readers. A reset of a workflow chain to a point before the close reopens the stream.
+message Closed {
+    temporal.api.enums.v1.StreamCloseStatus status = 1;
+    // From an explicit close.
+    oneof outcome {
+        temporal.api.common.v1.Payload result = 2;
+        temporal.api.failure.v1.Failure failure = 3;
+    }
+    google.protobuf.Timestamp close_time = 4;
+}
+
+// Delivered to a subscription's callback, and returned by a subscribe that fires at once.
+message StreamMoved {
+    // The stream's max offset when the wake-up was delivered.
+    bytes max_offset = 1;
+    // Set if the stream is closed. The reader treats the stream as closed even if it finds no
+    // close in Redis: the server closes a Redis stream itself, for example when its owner is
+    // terminated.
+    Closed closed = 2;
+}
+
+// In the gRPC status details, and in the application failure of a System Nexus operation.
+message StreamErrorDetails {
+    temporal.api.enums.v1.StreamErrorReason reason = 1;
+    // STREAM_ERROR_REASON_OFFSET_TRIMMED: the oldest retained offset.
+    bytes earliest_offset = 2;
+    // STREAM_ERROR_REASON_OFFSET_NOT_ON_BRANCH: the last offset that both the reader's branch and
+    // the current branch contain. The reader withdraws what it read after it, and reads on from
+    // it.
+    bytes last_valid_offset = 3;
 }
